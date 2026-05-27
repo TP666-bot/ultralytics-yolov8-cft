@@ -71,14 +71,14 @@ CFT 原论文方法示意图见官方仓库：[cft.png](https://github.com/DocF/
 | 3 | **Y8-Add** | 双路 + 逐层 Add | `python tools/train_cft.py` + fusion Add yaml |
 | 4 | **Y8-CFT** | 双路 + GPT×3 | `python tools/train_cft.py` + fusion CFT yaml |
 
-**YOLOv5+CFT 对照上界**（原仓库作者权重，本机已复现）：
+**YOLOv5+CFT 参考结果**（原仓库作者权重，独立复现）：
 
-| 指标 | 本机复现 | 论文 README |
-|------|----------|-------------|
+| 指标 | 复现值 | 论文 README |
+|------|--------|-------------|
 | mAP@0.5 | **0.972** | 0.975 |
 | mAP@0.5:0.95 | **0.633** | 0.636 |
 
-YOLOv8 结果为独立新实验，数值供迁移期参考，详见 [`cft_yolov8_config.md`](cft_yolov8_config.md) 第十节。
+YOLOv8 为独立架构下的消融研究；完整实验协议见 [`cft_yolov8_config.md`](cft_yolov8_config.md)。
 
 ---
 
@@ -113,9 +113,9 @@ bash tools/setup_new_machine.sh
 ### 4. 环境
 
 ```bash
-conda create -p ~/conda_envs/ms_cft python=3.10 -y
-conda activate ~/conda_envs/ms_cft
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+conda create -n y8-cft python=3.10 -y
+conda activate y8-cft
+pip install torch torchvision   # 按 https://pytorch.org 选择 CUDA 版本
 pip install -e .
 ```
 

@@ -507,16 +507,63 @@ python3 test.py --weights yolov5l_transformerx3_llvip_s1024_bs32_e200.pt \
 
 **前提**：GitHub 已登录；本机 `git config user.name` / `user.email` 已设置。
 
-**① 在 GitHub 网页创建空仓库**
+**① 在 GitHub 网页创建仓库**
 
 1. 打开 https://github.com/new  
 2. Owner 选 **TP666-bot**  
 3. Repository name：**`ultralytics-yolov8-cft`**  
-4. 选 **Private**（推荐，含实验配置）或 Public  
-5. **不要**勾选 “Add a README” / “Add .gitignore”（保持空仓库）  
+4. 选 **Private**（推荐）或 Public  
+5. **Initialize 选项（二选一，见下）**  
 6. Create repository  
 
+**关于 “不要勾选 README” 是什么意思？**
+
+GitHub 创建仓库时可勾选 **“Add a README file”**。若勾选，GitHub 会在远程自动生成一个初始 commit（含默认 README）。你本机已有完整代码和 commit 历史，第一次 `git push` 时远程**不是空仓库**，Git 会拒绝推送并提示 *non-fast-forward*。
+
+| 方式 | 操作 | 适用 |
+|------|------|------|
+| **A. 空仓库（省事）** | 三项都不勾选（无 README、无 .gitignore、无 license） | 本机已有 commit，直接 `git push` |
+| **B. 带 README（推荐展示）** | 可勾选 README；推送前先 `git pull github main --rebase` 再 push | 想要 GitHub 首页立刻有内容 |
+| **C. 本仓库方案（最佳）** | 创建时空仓库 **或** 带 README 均可；本机已含 **`README.md`** 学术介绍页，push 后会**覆盖** GitHub 默认 README | **推荐**：首页即项目说明 |
+
+本仓库根目录 **`README.md`** 为 YOLOv8+CFT 学术风格介绍（Abstract、实验表、Quick Start、Citation）；详细操作仍见 **`cft_yolov8_config.md`**。
+
 **② 在本机 ultralytics 目录提交并推送**
+
+```bash
+cd ~/my_new_space/ultralytics
+git checkout cft-yolov8-llvip
+
+# 若尚未提交 README，追加一次 commit：
+git add README.md cft_yolov8_config.md
+git commit -m "Add academic README and update GitHub setup docs" 2>/dev/null || true
+
+# 若 GitHub 建库时勾选了 README，先拉再推：
+# git pull github main --rebase --allow-unrelated-histories   # 仅首次需要
+# git push -u github cft-yolov8-llvip
+
+git push -u github cft-yolov8-llvip
+```
+
+<details>
+<summary>首次推送、尚未 commit 时的完整 git add 列表</summary>
+
+```bash
+git add .gitignore README.md cft_yolov8_config.md tools/ \
+  ultralytics/cfg/models/v8/yolov8l_fusion_add_llvip.yaml \
+  ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml \
+  ultralytics/data/dual_stream.py ultralytics/data/dual_utils.py \
+  ultralytics/models/yolo/detect/cft_train.py \
+  ultralytics/nn/modules/cft.py ultralytics/nn/modules/__init__.py \
+  ultralytics/nn/tasks.py ultralytics/nn/tasks_dual.py
+git commit -m "Add YOLOv8 CFT port for LLVIP"
+git remote add github https://github.com/TP666-bot/ultralytics-yolov8-cft.git 2>/dev/null || true
+git push -u github cft-yolov8-llvip
+```
+
+</details>
+
+~~旧步骤（已 commit 可跳过）：~~
 
 ```bash
 cd ~/my_new_space/ultralytics
@@ -528,7 +575,7 @@ git checkout -b cft-yolov8-llvip
 git status
 
 # 添加 CFT 相关改动（yaml 数据集配置由 setup 脚本生成，已在 .gitignore）
-git add .gitignore \
+git add .gitignore README.md \
   cft_yolov8_config.md \
   tools/ \
   ultralytics/cfg/models/v8/yolov8l_fusion_add_llvip.yaml \

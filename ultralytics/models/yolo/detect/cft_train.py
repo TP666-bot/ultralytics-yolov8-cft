@@ -5,8 +5,6 @@ from __future__ import annotations
 from copy import copy
 from typing import Any
 
-import torch
-
 from ultralytics.data.build import build_dataloader
 from ultralytics.data.dual_stream import build_dual_yolo_dataset
 from ultralytics.data.dual_utils import check_dual_det_dataset
@@ -30,9 +28,7 @@ class CFTDetectionTrainer(DetectionTrainer):
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         gs = max(int(unwrap_model(self.model).stride.max()), 32)
-        return build_dual_yolo_dataset(
-            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs
-        )
+        return build_dual_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
         assert mode in {"train", "val"}

@@ -60,7 +60,7 @@ from .block import (
     SCDown,
     TorchVision,
 )
-from .cft import Add, Add2, GPT
+from .cft import GPT, Add, Add2
 from .conv import (
     CBAM,
     ChannelAttention,
@@ -109,9 +109,6 @@ from .transformer import (
 
 __all__ = (
     "AIFI",
-    "Add",
-    "Add2",
-    "GPT",
     "C1",
     "C2",
     "C2PSA",
@@ -121,6 +118,7 @@ __all__ = (
     "CIB",
     "DFL",
     "ELAN1",
+    "GPT",
     "MLP",
     "OBB",
     "OBB26",
@@ -131,6 +129,8 @@ __all__ = (
     "A2C2f",
     "AConv",
     "ADown",
+    "Add",
+    "Add2",
     "Attention",
     "BNContrastiveHead",
     "Bottleneck",

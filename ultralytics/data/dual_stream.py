@@ -5,11 +5,9 @@ from __future__ import annotations
 import math
 import os
 from copy import deepcopy
-from pathlib import Path
 from typing import Any
 
 import cv2
-import numpy as np
 import torch
 
 from ultralytics.data.augment import Compose, Format, LetterBox

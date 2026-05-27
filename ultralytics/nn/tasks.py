@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 
 from ultralytics.nn.autobackend import check_class_names
+from ultralytics.nn.modules.cft import Add, Add2, GPT
 from ultralytics.nn.modules import (
     AIFI,
     C1,
@@ -1570,7 +1571,8 @@ def parse_model(d, ch, verbose=True):
 
     if verbose:
         LOGGER.info(f"\n{'':>3}{'from':>20}{'n':>3}{'params':>10}  {'module':<45}{'arguments':<30}")
-    ch = [ch]
+    input_channels = ch[-1] if isinstance(ch, list) else ch
+    ch = [ch] if not isinstance(ch, list) else ch
     layers, save, c2 = [], [], ch[-1]  # layers, savelist, ch out
     base_modules = frozenset(
         {
@@ -1643,7 +1645,8 @@ def parse_model(d, ch, verbose=True):
                     args[j] = locals()[a] if a in locals() else ast.literal_eval(a)
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
         if m in base_modules:
-            c1, c2 = ch[f], args[0]
+            c1 = input_channels if f == -4 else ch[f]
+            c2 = args[0]
             if c2 != nc:  # if c2 != nc (e.g., Classify() output)
                 c2 = make_divisible(min(c2, max_channels) * width, 8)
             if m is C2fAttn:  # set 1) embed channels and 2) num heads
@@ -1710,6 +1713,15 @@ def parse_model(d, ch, verbose=True):
             args = [c1, c2, *args[1:]]
         elif m is CBFuse:
             c2 = ch[f[-1]]
+        elif m is Add:
+            c2 = ch[f[0]]
+            args = [c2]
+        elif m is Add2:
+            c2 = ch[f[0]]
+            args = [c2, args[1]]
+        elif m is GPT:
+            c2 = ch[f[0]]
+            args = [c2, *args[1:]]
         elif m in frozenset({TorchVision, Index}):
             c2 = args[0]
             c1 = ch[f]

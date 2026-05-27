@@ -11,7 +11,6 @@ import torch
 import torch.nn as nn
 
 from ultralytics.nn.autobackend import check_class_names
-from ultralytics.nn.modules.cft import Add, Add2, GPT
 from ultralytics.nn.modules import (
     AIFI,
     C1,
@@ -74,6 +73,7 @@ from ultralytics.nn.modules import (
     YOLOESegment26,
     v10Detect,
 )
+from ultralytics.nn.modules.cft import GPT, Add, Add2
 from ultralytics.utils import DEFAULT_CFG_DICT, LOGGER, WINDOWS, YAML, colorstr, emojis
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import (

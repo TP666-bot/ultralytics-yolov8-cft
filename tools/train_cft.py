@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train YOLOv8 + CFT (dual RGB/IR) on LLVIP.
+r"""Train YOLOv8 + CFT (dual RGB/IR) on LLVIP.
 
 Example:
   python tools/train_cft.py \\

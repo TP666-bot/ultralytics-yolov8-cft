@@ -17,8 +17,49 @@ from ultralytics.utils import LOGGER, RANK
 from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_model
 
 
+def _on_train_epoch_start(trainer) -> None:
+    """Optionally freeze RGB/IR backbone (layers 0-19) for the first ``freeze_epochs``."""
+    n = int(getattr(trainer.args, "freeze_epochs", 0) or 0)
+    if n <= 0:
+        return
+    freeze = trainer.epoch < n
+    model = unwrap_model(trainer.model)
+    for name, param in model.named_parameters():
+        if not name.startswith("model."):
+            continue
+        parts = name.split(".")
+        try:
+            idx = int(parts[1])
+        except (IndexError, ValueError):
+            continue
+        if idx <= 19:
+            param.requires_grad = not freeze
+
+
 class CFTDetectionTrainer(DetectionTrainer):
     """Train YOLOv8 + CFT (RGB/IR) fusion models."""
+
+    def __init__(self, cfg=None, overrides=None, _callbacks=None):
+        super().__init__(cfg, overrides, _callbacks)
+        self.add_callback("on_train_epoch_start", _on_train_epoch_start)
+
+    def setup_val(self):
+        """Prepare model and dataloader for standalone validation (``tools/val_cft.py``)."""
+        if isinstance(self.model, torch.nn.Module) and self.validator is not None:
+            return
+        self.setup_model()
+        self.model = self.model.to(self.device)
+        self.set_model_attributes()
+        gs = max(int(unwrap_model(self.model).stride.max()), 32)
+        self.args.imgsz = int(self.args.imgsz)
+        self.test_loader = self.get_dataloader(self.data["val"], batch_size=self.batch_size * 2, rank=-1, mode="val")
+        self.validator = self.get_validator()
+        LOGGER.info(f"Validation dataloader: {len(self.test_loader)} batches")
+
+    def validate(self):
+        if self.validator is None:
+            self.setup_val()
+        return super().validate()
 
     def get_dataset(self):
         data = check_dual_det_dataset(self.args.data)

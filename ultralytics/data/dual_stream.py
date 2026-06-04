@@ -14,6 +14,7 @@ import torch
 
 from ultralytics.data.augment import Compose, Format, LetterBox
 from ultralytics.data.dataset import YOLODataset
+from ultralytics.data.dual_augment import dual_v8_transforms
 from ultralytics.utils import colorstr
 
 
@@ -77,33 +78,28 @@ class YOLODualStreamDataset(YOLODataset):
         return self.update_labels_info(label)
 
     def build_transforms(self, hyp=None):
+        """Training: synced v8 mosaic/affine/flip/HSV; val: letterbox only."""
         hyp = hyp or self.hyp
-        lb = LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=self.augment)
-
-        class _LetterBoxDual:
-            def __init__(self, letterbox):
-                self.lb = letterbox
-
-            def __call__(self, labels):
-                labels = self.lb(labels)
-                labels["img2"] = self.lb(image=labels["img2"])
-                return labels
-
-        return Compose(
-            [
-                _LetterBoxDual(lb),
-                DualFormat(
-                    bbox_format="xywh",
-                    normalize=True,
-                    return_mask=self.use_segments,
-                    return_keypoint=self.use_keypoints,
-                    return_obb=self.use_obb,
-                    batch_idx=True,
-                    mask_ratio=getattr(hyp, "mask_ratio", 4),
-                    mask_overlap=getattr(hyp, "overlap_mask", True),
-                ),
-            ]
+        if self.augment:
+            hyp.mosaic = hyp.mosaic if self.augment and not self.rect else 0.0
+            hyp.mixup = 0.0
+            hyp.cutmix = 0.0
+            transforms = dual_v8_transforms(self, self.imgsz, hyp)
+        else:
+            transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
+        transforms.append(
+            DualFormat(
+                bbox_format="xywh",
+                normalize=True,
+                return_mask=self.use_segments,
+                return_keypoint=self.use_keypoints,
+                return_obb=self.use_obb,
+                batch_idx=True,
+                mask_ratio=getattr(hyp, "mask_ratio", 4),
+                mask_overlap=getattr(hyp, "overlap_mask", True),
+            )
         )
+        return transforms
 
     @staticmethod
     def collate_fn(batch):

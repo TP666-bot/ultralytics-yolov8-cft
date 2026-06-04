@@ -49,6 +49,11 @@ def main():
     if "pretrained" not in overrides and not str(overrides.get("model", "")).endswith(".pt"):
         overrides["pretrained"] = "yolov8l.pt"
     overrides.setdefault("task", "detect")
+    overrides.setdefault("epochs", 200)
+    overrides.setdefault("nbs", 32)
+    overrides.setdefault("lr0", 0.005)
+    overrides.setdefault("freeze_epochs", 10)
+    overrides.setdefault("iou", 0.7)
     trainer = CFTDetectionTrainer(cfg=DEFAULT_CFG, overrides=overrides)
     trainer.train()
 

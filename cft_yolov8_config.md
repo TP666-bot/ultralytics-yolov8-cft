@@ -3,6 +3,7 @@
 本文档面向 **clone 本仓库后的使用者**，说明如何在 LLVIP 数据集上复现 YOLOv8 单模态基线、双路 Add 融合与 **Cross-Modality Fusion Transformer (CFT)** 实验，并与 YOLOv5+CFT 原论文结果对照。
 
 - 项目概览与引用：[`README.md`](README.md)
+- **性能改进与复训（P1–P5）**：[`tp_improve.md`](tp_improve.md)
 - CFT 原论文：[Cross-Modality Fusion Transformer for Multispectral Object Detection](https://arxiv.org/abs/2111.00273)（arXiv:2111.00273）
 - YOLOv5+CFT 官方实现：[DocF/multispectral-object-detection](https://github.com/DocF/multispectral-object-detection)
 - 本仓库分支：`cft-yolov8-llvip`

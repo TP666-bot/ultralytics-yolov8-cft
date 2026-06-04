@@ -38,7 +38,10 @@ def main():
     overrides = parse_overrides(sys.argv[1:])
     overrides.setdefault("data", "ultralytics/cfg/datasets/llvip_dual.yaml")
     overrides.setdefault("task", "detect")
+    overrides.setdefault("conf", 0.001)
+    overrides.setdefault("iou", 0.5)
     trainer = CFTDetectionTrainer(cfg=DEFAULT_CFG, overrides=overrides)
+    trainer.setup_val()
     trainer.validate()
 
 

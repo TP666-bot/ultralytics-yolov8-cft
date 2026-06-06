@@ -12,9 +12,9 @@ import cv2
 import numpy as np
 import torch
 
-from ultralytics.data.augment import Compose, Format, LetterBox
+from ultralytics.data.augment import Compose, Format
 from ultralytics.data.dataset import YOLODataset
-from ultralytics.data.dual_augment import dual_v8_transforms
+from ultralytics.data.dual_augment import DualLetterBox, dual_v8_transforms
 from ultralytics.utils import colorstr
 
 
@@ -86,7 +86,7 @@ class YOLODualStreamDataset(YOLODataset):
             hyp.cutmix = 0.0
             transforms = dual_v8_transforms(self, self.imgsz, hyp)
         else:
-            transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
+            transforms = Compose([DualLetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
         transforms.append(
             DualFormat(
                 bbox_format="xywh",

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Train YOLOv8 + CFT (dual RGB/IR) on LLVIP.
 
-Example:
+8GB GPU (e.g. RTX 4060 Ti) — YOLOv8l + CFT @ 1024:
   python tools/train_cft.py \\
     model=ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml \\
     data=ultralytics/cfg/datasets/llvip_dual.yaml \\
-    pretrained=yolov8l.pt epochs=200 imgsz=1024 batch=4 device=0 \\
-    project=runs/llvip name=y8_cft
+    pretrained=yolov8l.pt epochs=200 imgsz=1024 batch=1 nbs=16 workers=2 device=0 \\
+    project=runs/llvip name=y8_cft_v2
+
+Resume after OOM at backbone-unfreeze (epoch 11+):
+  python tools/train_cft.py resume=runs/detect/runs/llvip/y8_cft_v2/weights/last.pt batch=1 freeze_epochs=0
 """
 
 from __future__ import annotations
@@ -50,11 +53,16 @@ def main():
         overrides["pretrained"] = "yolov8l.pt"
     overrides.setdefault("task", "detect")
     overrides.setdefault("epochs", 200)
-    overrides.setdefault("nbs", 32)
+    overrides.setdefault("batch", 1)  # YOLOv8l+CFT dual @1024 needs batch=1 on 8GB; use nbs for effective batch
+    overrides.setdefault("nbs", 16)
+    overrides.setdefault("workers", 2)
+    overrides.setdefault("optimizer", "SGD")  # do not use auto/MuSGD — incompatible with CFT GPT grads
     overrides.setdefault("lr0", 0.005)
-    overrides.setdefault("freeze_epochs", 10)
+    overrides.setdefault("momentum", 0.937)
     overrides.setdefault("iou", 0.7)
-    trainer = CFTDetectionTrainer(cfg=DEFAULT_CFG, overrides=overrides)
+    # CFT-only arg (not in Ultralytics cfg); must not pass to get_cfg
+    freeze_epochs = int(overrides.pop("freeze_epochs", 10))
+    trainer = CFTDetectionTrainer(cfg=DEFAULT_CFG, overrides=overrides, freeze_epochs=freeze_epochs)
     trainer.train()
 
 

@@ -19,10 +19,17 @@ from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_m
 
 def _on_train_epoch_start(trainer) -> None:
     """Optionally freeze RGB/IR backbone (layers 0-19) for the first ``freeze_epochs``."""
-    n = int(getattr(trainer.args, "freeze_epochs", 0) or 0)
+    n = int(getattr(trainer, "freeze_epochs", 0) or 0)
     if n <= 0:
         return
     freeze = trainer.epoch < n
+    if trainer.epoch == n and RANK in {-1, 0}:
+        LOGGER.warning(
+            f"CFT backbone (layers 0–19) unfrozen at epoch {trainer.epoch + 1}. "
+            "VRAM use jumps ~2×; on 8GB GPUs use batch=1 (and resume from last.pt if OOM)."
+        )
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
     model = unwrap_model(trainer.model)
     for name, param in model.named_parameters():
         if not name.startswith("model."):
@@ -39,9 +46,23 @@ def _on_train_epoch_start(trainer) -> None:
 class CFTDetectionTrainer(DetectionTrainer):
     """Train YOLOv8 + CFT (RGB/IR) fusion models."""
 
-    def __init__(self, cfg=None, overrides=None, _callbacks=None):
+    def __init__(self, cfg=None, overrides=None, _callbacks=None, freeze_epochs: int = 10):
+        self.freeze_epochs = int(freeze_epochs or 0)
         super().__init__(cfg, overrides, _callbacks)
         self.add_callback("on_train_epoch_start", _on_train_epoch_start)
+
+    def _build_train_pipeline(self):
+        """Build loaders; val batch matches train batch (dual stream already loads RGB+IR)."""
+        super()._build_train_pipeline()
+        from ultralytics.utils import LOCAL_RANK
+
+        batch_size = self.batch_size // max(self.world_size, 1)
+        self.test_loader = self.get_dataloader(
+            self.data.get("val") or self.data.get("test"),
+            batch_size=batch_size,
+            rank=LOCAL_RANK,
+            mode="val",
+        )
 
     def setup_val(self):
         """Prepare model and dataloader for standalone validation (``tools/val_cft.py``)."""
@@ -52,7 +73,7 @@ class CFTDetectionTrainer(DetectionTrainer):
         self.set_model_attributes()
         gs = max(int(unwrap_model(self.model).stride.max()), 32)
         self.args.imgsz = int(self.args.imgsz)
-        self.test_loader = self.get_dataloader(self.data["val"], batch_size=self.batch_size * 2, rank=-1, mode="val")
+        self.test_loader = self.get_dataloader(self.data["val"], batch_size=self.batch_size, rank=-1, mode="val")
         self.validator = self.get_validator()
         LOGGER.info(f"Validation dataloader: {len(self.test_loader)} batches")
 

@@ -24,6 +24,20 @@ from ultralytics.data.augment import (
 from ultralytics.utils.instance import Instances
 
 
+class DualLetterBox(LetterBox):
+    """LetterBox RGB and IR with identical scale and padding (required for CFT fusion)."""
+
+    def __call__(self, labels: dict[str, Any] | None = None, image: np.ndarray | None = None):
+        if labels is None:
+            labels = {}
+        img2 = labels.pop("img2", None)
+        out = super().__call__(labels, image)
+        if img2 is not None:
+            # Image-only path avoids touching RGB bbox instances; same new_shape yields matched H×W.
+            out["img2"] = super().__call__(labels={}, image=img2)
+        return out
+
+
 class DualMosaic(Mosaic):
     """Mosaic augmentation with the same tile layout applied to ``img2`` (IR)."""
 

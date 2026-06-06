@@ -121,8 +121,12 @@ python tools/train_cft.py \
 
 | 参数 | 默认 | 含义 |
 |------|------|------|
-| `lr0` | `0.005` | 较 Ultralytics 默认 `0.01` 更保守 |
+| `optimizer` | **`SGD`** | **禁止 `auto`**（8.4 会选 MuSGD/Muon，与 GPT 梯度形状冲突导致 `AssertionError`） |
+| `lr0` | `0.005` | 较 Ultralytics 默认 `0.01` 更保守；使用 SGD 时生效 |
+| `momentum` | `0.937` | 与 YOLOv5 一致 |
 | `freeze_epochs` | `10` | 前 10 epoch 冻结 `model.0`–`model.19`（双路 backbone） |
+
+**注意**：`freeze_epochs` 是 **`train_cft.py` 专用参数**，不是 Ultralytics 全局 cfg 字段；由脚本在内部处理，不要传给 `yolo train`。
 
 自定义：`freeze_epochs=0` 关闭冻结；`lr0=0.01` 恢复激进学习率。
 
@@ -187,8 +191,56 @@ git push github cft-yolov8-llvip
 
 ---
 
-## 7. 变更日志
+## 7. 故障：验证阶段 `Add2` 尺寸不匹配
+
+现象：第 1 epoch 训练结束后验证崩溃：
+
+```text
+RuntimeError: The size of tensor a (64) must match the size of tensor b (80) at non-singleton dimension 2
+```
+
+原因：验证用的 `LetterBox` **只处理了 RGB `img`**，**IR `img2` 未做相同 letterbox**，两路特征图空间尺寸不一致，CFT `Add2` 无法相加。
+
+处理：已加入 `DualLetterBox`，验证时对 RGB/IR 做相同缩放与 padding（`dual_augment.py` + `dual_stream.py`）。
+
+---
+
+## 8. 故障：第 11 epoch OOM（backbone 解冻）
+
+现象：epoch 1–10 正常（mAP 可达 ~0.9），**第 11 epoch 训练开始**时 `CUDA out of memory`。
+
+原因：`freeze_epochs=10` 结束后 **双路 backbone（层 0–19）全部参与反传**，显存约为冻结阶段的 2 倍；8GB 卡上 `batch=2` + `imgsz=1024` 不够。
+
+处理：
+
+1. **从头训练**：`batch=1 nbs=16`（有效 batch 仍为 16）
+2. **从 checkpoint 续训**（推荐，保留前 10 epoch 权重）：
+
+```bash
+python tools/train_cft.py \
+  resume=runs/detect/runs/llvip/y8_cft_v2/weights/last.pt \
+  batch=1 nbs=16 freeze_epochs=0 workers=2 device=0
+```
+
+`freeze_epochs=0` 避免再次冻结；`last.pt` 已含优化器状态。
+
+---
+
+## 9. 故障：Muon / `optimizer=auto` 报错
+
+现象：第 1 个 epoch 反向时在 `muon.py` 报 `assert len(G.shape) == 2`。
+
+原因：Ultralytics 8.4 `optimizer=auto` 会选用 **MuSGD**，Muon 更新只支持 **2D** 梯度；CFT 的 GPT 等模块不满足。
+
+处理：在 `train_cft.py` 中默认 **`optimizer=SGD`**。若命令行写了 `optimizer=auto` 请删掉或改为 `optimizer=SGD`。
+
+---
+
+## 10. 变更日志
 
 | 日期 | 内容 |
 |------|------|
 | 2025-05-27 | 初版：解读 `results (1).csv`，落地 P1–P5 |
+| 2025-05-27 | 默认 `optimizer=SGD`，规避 MuSGD 与 CFT 不兼容 |
+| 2025-05-27 | `DualLetterBox`：验证时同步 letterbox RGB/IR |
+| 2025-05-27 | 默认 `batch=1`；验证 batch 不再 ×2；解冻 epoch 显存提示 |

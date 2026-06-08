@@ -8,13 +8,13 @@
 
 来源文件：`results (1).csv`（双路 CFT / `train_cft.py`，共 **42 epoch** 记录）。
 
-| 阶段 | epoch | mAP@0.5 (val) | mAP@0.5:0.95 | 备注 |
-|------|-------|---------------|--------------|------|
-| 起步 | 1 | 0.738 | 0.308 | 预训练 backbone 起点 |
-| 快速提升 | 5 | 0.881 | 0.527 | |
-| **峰值附近** | **12** | **0.923** | **0.594** | 本轮日志最高点 |
-| 平台期 | 20–30 | ~0.919–0.920 | ~0.587–0.590 | 增幅放缓 |
-| 末段 | 42 | 0.902 | 0.567 | 略有回落，可能未收敛 |
+| 阶段         | epoch  | mAP@0.5 (val) | mAP@0.5:0.95 | 备注                 |
+| ------------ | ------ | ------------- | ------------ | -------------------- |
+| 起步         | 1      | 0.738         | 0.308        | 预训练 backbone 起点 |
+| 快速提升     | 5      | 0.881         | 0.527        |                      |
+| **峰值附近** | **12** | **0.923**     | **0.594**    | 本轮日志最高点       |
+| 平台期       | 20–30  | ~0.919–0.920  | ~0.587–0.590 | 增幅放缓             |
+| 末段         | 42     | 0.902         | 0.567        | 略有回落，可能未收敛 |
 
 **结论（客观）：**
 
@@ -27,14 +27,14 @@
 
 ## 2. 与论文 / 本机实验对照
 
-| 设置 | mAP@0.5 | 说明 |
-|------|---------|------|
-| 论文 LLVIP CFT（YOLOv5l） | **0.975** | 作者权重 + 原 `test.py` |
-| 论文 LLVIP Add | 0.958 | 无 GPT |
-| 独立复现 Y5-CFT | 0.972 | 同协议 |
-| 另一台机器 Y8-CFT（42e, val iou=0.7） | **~0.923（峰值）** | `results (1).csv` |
-| 本机 Y8-IR 单模态（100e） | 0.958 | `yolo train`，完整 v8 增强 |
-| 本机 Y8-Add（100e，旧管线） | ~0.69 | 双路几乎无 mosaic |
+| 设置                                  | mAP@0.5            | 说明                       |
+| ------------------------------------- | ------------------ | -------------------------- |
+| 论文 LLVIP CFT（YOLOv5l）             | **0.975**          | 作者权重 + 原 `test.py`    |
+| 论文 LLVIP Add                        | 0.958              | 无 GPT                     |
+| 独立复现 Y5-CFT                       | 0.972              | 同协议                     |
+| 另一台机器 Y8-CFT（42e, val iou=0.7） | **~0.923（峰值）** | `results (1).csv`          |
+| 本机 Y8-IR 单模态（100e）             | 0.958              | `yolo train`，完整 v8 增强 |
+| 本机 Y8-Add（100e，旧管线）           | ~0.69              | 双路几乎无 mosaic          |
 
 ---
 
@@ -49,11 +49,11 @@ YOLOv5 多光谱代码对 RGB/IR 使用 **`load_mosaic_RGB_IR` + 同步几何变
 
 ### 3.2 训练轮数与名义 batch（P2）
 
-| 项 | 另一台机器日志 | 论文 / 作者权重 |
-|----|----------------|-----------------|
-| epochs | 42（未完成） | **200** |
-| nbs | 未在 csv 体现，常为 16 | 文件名 **bs32** |
-| 增强版默认 | — | `train_cft.py` 默认 **epochs=200, nbs=32** |
+| 项         | 另一台机器日志         | 论文 / 作者权重                            |
+| ---------- | ---------------------- | ------------------------------------------ |
+| epochs     | 42（未完成）           | **200**                                    |
+| nbs        | 未在 csv 体现，常为 16 | 文件名 **bs32**                            |
+| 增强版默认 | —                      | `train_cft.py` 默认 **epochs=200, nbs=32** |
 
 ### 3.3 GPT 初始化（P3）
 
@@ -68,9 +68,9 @@ CFT 的 GPT 模块默认 **随机初始化**；论文使用 **充分训练的 YO
 
 ### 3.5 评估协议（P5）
 
-| 用途 | conf | iou | 说明 |
-|------|------|-----|------|
-| 训练中 val | 默认 | **0.7** | `results.csv` 中数字 |
+| 用途            | conf      | iou     | 说明                                   |
+| --------------- | --------- | ------- | -------------------------------------- |
+| 训练中 val      | 默认      | **0.7** | `results.csv` 中数字                   |
 | 论文 / 公平对比 | **0.001** | **0.5** | 必须用 `val_cft.py` 或对齐的 `test.py` |
 
 ---
@@ -79,15 +79,15 @@ CFT 的 GPT 模块默认 **随机初始化**；论文使用 **充分训练的 YO
 
 ### P1 — 双路同步数据增强
 
-| 文件 | 内容 |
-|------|------|
+| 文件                               | 内容                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
 | `ultralytics/data/dual_augment.py` | `dual_v8_transforms()`：mosaic/affine/flip/HSV 同步 RGB+IR；禁用 MixUp/CutMix |
-| `ultralytics/data/dual_stream.py` | 训练分支调用 `dual_v8_transforms` |
+| `ultralytics/data/dual_stream.py`  | 训练分支调用 `dual_v8_transforms`                                             |
 
 ### P2 — 训练默认超参
 
-| 文件 | 默认值 |
-|------|--------|
+| 文件                 | 默认值                                                        |
+| -------------------- | ------------------------------------------------------------- |
 | `tools/train_cft.py` | `epochs=200`, `nbs=32`, `batch` 仍由 CLI 指定（如 `batch=2`） |
 
 显式覆盖示例：
@@ -119,12 +119,12 @@ python tools/train_cft.py \
 
 ### P4 — 更低学习率 + 前若干 epoch 冻结 backbone
 
-| 参数 | 默认 | 含义 |
-|------|------|------|
-| `optimizer` | **`SGD`** | **禁止 `auto`**（8.4 会选 MuSGD/Muon，与 GPT 梯度形状冲突导致 `AssertionError`） |
-| `lr0` | `0.005` | 较 Ultralytics 默认 `0.01` 更保守；使用 SGD 时生效 |
-| `momentum` | `0.937` | 与 YOLOv5 一致 |
-| `freeze_epochs` | `10` | 前 10 epoch 冻结 `model.0`–`model.19`（双路 backbone） |
+| 参数            | 默认      | 含义                                                                             |
+| --------------- | --------- | -------------------------------------------------------------------------------- |
+| `optimizer`     | **`SGD`** | **禁止 `auto`**（8.4 会选 MuSGD/Muon，与 GPT 梯度形状冲突导致 `AssertionError`） |
+| `lr0`           | `0.005`   | 较 Ultralytics 默认 `0.01` 更保守；使用 SGD 时生效                               |
+| `momentum`      | `0.937`   | 与 YOLOv5 一致                                                                   |
+| `freeze_epochs` | `10`      | 前 10 epoch 冻结 `model.0`–`model.19`（双路 backbone）                           |
 
 **注意**：`freeze_epochs` 是 **`train_cft.py` 专用参数**，不是 Ultralytics 全局 cfg 字段；由脚本在内部处理，不要传给 `yolo train`。
 
@@ -134,11 +134,11 @@ python tools/train_cft.py \
 
 ```bash
 python tools/val_cft.py \
-  model=runs/detect/runs/llvip/<run>/weights/best.pt \
+  model=runs/detect/runs/llvip/ \
   data=ultralytics/cfg/datasets/llvip_dual.yaml \
   imgsz=1024 batch=4 device=0 \
   conf=0.001 iou=0.5 \
-  project=runs/llvip name=y8_cft_paper_val exist_ok=True
+  project=runs/llvip name=y8_cft_paper_val exist_ok=True < run > /weights/best.pt
 ```
 
 `CFTDetectionTrainer.setup_val()` 已修复单独验证时 `validator is None` 的问题。
@@ -238,9 +238,9 @@ python tools/train_cft.py \
 
 ## 10. 变更日志
 
-| 日期 | 内容 |
-|------|------|
-| 2025-05-27 | 初版：解读 `results (1).csv`，落地 P1–P5 |
-| 2025-05-27 | 默认 `optimizer=SGD`，规避 MuSGD 与 CFT 不兼容 |
-| 2025-05-27 | `DualLetterBox`：验证时同步 letterbox RGB/IR |
+| 日期       | 内容                                                    |
+| ---------- | ------------------------------------------------------- |
+| 2025-05-27 | 初版：解读 `results (1).csv`，落地 P1–P5                |
+| 2025-05-27 | 默认 `optimizer=SGD`，规避 MuSGD 与 CFT 不兼容          |
+| 2025-05-27 | `DualLetterBox`：验证时同步 letterbox RGB/IR            |
 | 2025-05-27 | 默认 `batch=1`；验证 batch 不再 ×2；解冻 epoch 显存提示 |

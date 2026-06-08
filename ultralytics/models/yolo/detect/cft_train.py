@@ -71,7 +71,7 @@ class CFTDetectionTrainer(DetectionTrainer):
         self.setup_model()
         self.model = self.model.to(self.device)
         self.set_model_attributes()
-        gs = max(int(unwrap_model(self.model).stride.max()), 32)
+        max(int(unwrap_model(self.model).stride.max()), 32)
         self.args.imgsz = int(self.args.imgsz)
         self.test_loader = self.get_dataloader(self.data["val"], batch_size=self.batch_size, rank=-1, mode="val")
         self.validator = self.get_validator()
@@ -92,9 +92,7 @@ class CFTDetectionTrainer(DetectionTrainer):
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         gs = max(int(unwrap_model(self.model).stride.max()), 32)
-        return build_dual_yolo_dataset(
-            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs
-        )
+        return build_dual_yolo_dataset(self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs)
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):
         assert mode in {"train", "val"}

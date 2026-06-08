@@ -24,12 +24,12 @@ CFT（Cross-Modality Fusion Transformer）在 YOLOv5 双路检测器上，于 P3
 
 ### 1.2 与 YOLOv5 原实现的关系
 
-| 项目 | YOLOv5+CFT（原仓库） | 本仓库（YOLOv8+CFT） |
-|------|----------------------|----------------------|
-| 框架 | YOLOv5 + 自定义 `train.py` | Ultralytics YOLOv8 + `tools/train_cft.py` |
-| 融合模块 | `GPT` / `Add` / `Add2` | 同逻辑，见 `ultralytics/nn/modules/cft.py` |
-| 对照权重 | 作者发布之 YOLOv5l CFT 权重 | **不可**整模载入 Y8；可选部分加载 GPT |
-| 数据 | LLVIP 四路径 | 相同划分，见第五节 |
+| 项目     | YOLOv5+CFT（原仓库）        | 本仓库（YOLOv8+CFT）                       |
+| -------- | --------------------------- | ------------------------------------------ |
+| 框架     | YOLOv5 + 自定义 `train.py`  | Ultralytics YOLOv8 + `tools/train_cft.py`  |
+| 融合模块 | `GPT` / `Add` / `Add2`      | 同逻辑，见 `ultralytics/nn/modules/cft.py` |
+| 对照权重 | 作者发布之 YOLOv5l CFT 权重 | **不可**整模载入 Y8；可选部分加载 GPT      |
+| 数据     | LLVIP 四路径                | 相同划分，见第五节                         |
 
 本仓库 **不修改** 官方 multispectral 源码；YOLOv5 对照实验需在原仓库中单独进行。
 
@@ -41,58 +41,58 @@ CFT（Cross-Modality Fusion Transformer）在 YOLOv5 双路检测器上，于 P3
 
 与 CFT 论文 LLVIP 表格逻辑一致，主实验包含 **四组 YOLOv8 实验**，外加可选 **YOLOv5 对照**：
 
-| ID | 名称 | 模态 | 融合方式 | 模型配置 | 预训练初始化 | 训练入口 |
-|----|------|------|----------|----------|--------------|----------|
-| 1 | Y8-RGB | 可见光单路 | — | `yolov8l.pt` | COCO 预训练 YOLOv8-L | `yolo train` |
-| 2 | Y8-IR | 红外单路 | — | `yolov8l.pt` | 同上 | `yolo train` |
-| 3 | Y8-Add | RGB + IR | P3/P4/P5 **逐元素 Add** | `yolov8l_fusion_add_llvip.yaml` | `yolov8l.pt` 双路 backbone（`strict=False`） | `python tools/train_cft.py` |
-| 4 | Y8-CFT | RGB + IR | **GPT × 3**（CFT） | `yolov8l_fusion_transformerx3_llvip.yaml` | `yolov8l.pt` + GPT 随机初始化；可选 Y5 GPT 部分加载 | `python tools/train_cft.py` |
-| — | Y5-Add | 对照 | Add | 原仓库 yaml | `yolov5l.pt` | 原仓库 `train.py` |
-| — | Y5-CFT | 对照 | CFT | 原仓库 yaml | 作者 LLVIP 权重 | 原仓库 `test.py` / `train.py` |
+| ID  | 名称   | 模态       | 融合方式                | 模型配置                                  | 预训练初始化                                        | 训练入口                      |
+| --- | ------ | ---------- | ----------------------- | ----------------------------------------- | --------------------------------------------------- | ----------------------------- |
+| 1   | Y8-RGB | 可见光单路 | —                       | `yolov8l.pt`                              | COCO 预训练 YOLOv8-L                                | `yolo train`                  |
+| 2   | Y8-IR  | 红外单路   | —                       | `yolov8l.pt`                              | 同上                                                | `yolo train`                  |
+| 3   | Y8-Add | RGB + IR   | P3/P4/P5 **逐元素 Add** | `yolov8l_fusion_add_llvip.yaml`           | `yolov8l.pt` 双路 backbone（`strict=False`）        | `python tools/train_cft.py`   |
+| 4   | Y8-CFT | RGB + IR   | **GPT × 3**（CFT）      | `yolov8l_fusion_transformerx3_llvip.yaml` | `yolov8l.pt` + GPT 随机初始化；可选 Y5 GPT 部分加载 | `python tools/train_cft.py`   |
+| —   | Y5-Add | 对照       | Add                     | 原仓库 yaml                               | `yolov5l.pt`                                        | 原仓库 `train.py`             |
+| —   | Y5-CFT | 对照       | CFT                     | 原仓库 yaml                               | 作者 LLVIP 权重                                     | 原仓库 `test.py` / `train.py` |
 
 **推荐执行顺序**：1 → 2 → 3 → 4。实验 1/2 验证单模态数据链；3/4 验证双路与 CFT 融合。
 
 ### 2.2 控制变量（公平对比）
 
-| 变量 | 设定 | 说明 |
-|------|------|------|
-| 数据集 | LLVIP | 单类 `person`；官方 train/test 划分 |
-| 训练集 | `visible/train` + `infrared/train`（双模态） | 约 12 025 对 / 模态 |
-| 测试集 | `visible/test` + `infrared/test` | 约 3 463 对 / 模态；**所有 mAP 均在此评估** |
-| 输入尺寸 | `imgsz=1024` | 与作者 LLVIP CFT 权重及论文设置一致 |
-| 训练轮数 | `epochs=200` | 与论文 LLVIP 实验一致 |
-| 名义 batch | `nbs=16`（可调至 32） | Ultralytics 梯度累积；等效 batch ≈ `nbs` |
-| 物理 batch | `batch=1~4` | 依 GPU 显存调整，见 7.4 |
-| NMS | `conf=0.001`, `iou=0.5` | 对齐原仓库 `test.py` |
-| 指标 | P, R, mAP@0.5, mAP@0.75, mAP@0.5:0.95 | 检测标准 COCO 风格指标 |
-| 标签 | RGB 侧 `.txt`（YOLO 格式） | 双模态共用 RGB 侧框；IR 同 basename |
+| 变量       | 设定                                         | 说明                                        |
+| ---------- | -------------------------------------------- | ------------------------------------------- |
+| 数据集     | LLVIP                                        | 单类 `person`；官方 train/test 划分         |
+| 训练集     | `visible/train` + `infrared/train`（双模态） | 约 12 025 对 / 模态                         |
+| 测试集     | `visible/test` + `infrared/test`             | 约 3 463 对 / 模态；**所有 mAP 均在此评估** |
+| 输入尺寸   | `imgsz=1024`                                 | 与作者 LLVIP CFT 权重及论文设置一致         |
+| 训练轮数   | `epochs=200`                                 | 与论文 LLVIP 实验一致                       |
+| 名义 batch | `nbs=16`（可调至 32）                        | Ultralytics 梯度累积；等效 batch ≈ `nbs`    |
+| 物理 batch | `batch=1~4`                                  | 依 GPU 显存调整，见 7.4                     |
+| NMS        | `conf=0.001`, `iou=0.5`                      | 对齐原仓库 `test.py`                        |
+| 指标       | P, R, mAP@0.5, mAP@0.75, mAP@0.5:0.95        | 检测标准 COCO 风格指标                      |
+| 标签       | RGB 侧 `.txt`（YOLO 格式）                   | 双模态共用 RGB 侧框；IR 同 basename         |
 
 **不控制 / 预期存在差异的变量**：优化器默认值（Ultralytics vs YOLOv5）、anchor-free vs anchor-based 检测头、数据增强实现细节。因此 YOLOv8 绝对数值 **不要求** 与论文 YOLOv5 行完全一致；对比应关注 **同框架内消融趋势** 与 **相对 Y5 参考区间的合理性**。
 
 ### 2.3 假设（可检验命题）
 
-| 假设 | 预期 |
-|------|------|
-| H1 | 双路 Add（Y8-Add）优于单模态（Y8-RGB / Y8-IR） |
-| H2 | CFT（Y8-CFT）优于 Add（Y8-Add） |
-| H3 | Y8-CFT 相对 Y5-CFT 论文 mAP@0.5（≈0.975）处于合理接近区间，或揭示架构迁移带来的差异 |
+| 假设 | 预期                                                                                |
+| ---- | ----------------------------------------------------------------------------------- |
+| H1   | 双路 Add（Y8-Add）优于单模态（Y8-RGB / Y8-IR）                                      |
+| H2   | CFT（Y8-CFT）优于 Add（Y8-Add）                                                     |
+| H3   | Y8-CFT 相对 Y5-CFT 论文 mAP@0.5（≈0.975）处于合理接近区间，或揭示架构迁移带来的差异 |
 
 ### 2.4 论文参考数值（LLVIP，YOLOv5l）
 
-| 方法 | mAP@0.5 | mAP@0.5:0.95 | 来源 |
-|------|---------|--------------|------|
-| Add 融合 | 0.958 | 0.623 | 原仓库 README |
-| CFT（GPT×3） | 0.975 | 0.636 | 原仓库 README / 论文 |
+| 方法         | mAP@0.5 | mAP@0.5:0.95 | 来源                 |
+| ------------ | ------- | ------------ | -------------------- |
+| Add 融合     | 0.958   | 0.623        | 原仓库 README        |
+| CFT（GPT×3） | 0.975   | 0.636        | 原仓库 README / 论文 |
 
 **独立复现（YOLOv5+CFT，作者权重，`test.py`，1024）**：
 
-| 指标 | 复现值 | 论文 README |
-|------|--------|-------------|
-| P | 0.967 | — |
-| R | 0.931 | — |
-| mAP@0.5 | **0.972** | 0.975 |
-| mAP@0.75 | 0.724 | 0.729 |
-| mAP@0.5:0.95 | **0.633** | 0.636 |
+| 指标         | 复现值    | 论文 README |
+| ------------ | --------- | ----------- |
+| P            | 0.967     | —           |
+| R            | 0.931     | —           |
+| mAP@0.5      | **0.972** | 0.975       |
+| mAP@0.75     | 0.724     | 0.729       |
+| mAP@0.5:0.95 | **0.633** | 0.636       |
 
 该结果作为 YOLOv5+CFT 的 **参考上界**；YOLOv8 实验为 **新架构下的独立研究**，与之对比时需说明框架差异（见 2.2）。
 
@@ -163,43 +163,43 @@ yolo train model=yolov8l.pt data=ultralytics/cfg/datasets/llvip_rgb.yaml \
 **标签**：每个 `.jpg` 旁需同名 `.txt`（YOLO 格式：`0 cx cy w h`，单类 person）。若仅有 VOC `Annotations/`，可使用原仓库脚本转换：
 
 ```bash
-python3 voc_to_yolo_llvip.py --dataset-root <WORKSPACE>/LLVIP
+python3 voc_to_yolo_llvip.py --dataset-root < WORKSPACE > /LLVIP
 ```
 
 （脚本见 [multispectral-object-detection/tools](https://github.com/DocF/multispectral-object-detection)。）
 
 **数据配置（由 `setup_new_machine.sh` 生成）**：
 
-| 文件 | 用途 | 路径键 |
-|------|------|--------|
-| `llvip_rgb.yaml` | 单模态 RGB | `train` / `val` → visible |
-| `llvip_ir.yaml` | 单模态 IR | `train` / `val` → infrared |
+| 文件              | 用途       | 路径键                                       |
+| ----------------- | ---------- | -------------------------------------------- |
+| `llvip_rgb.yaml`  | 单模态 RGB | `train` / `val` → visible                    |
+| `llvip_ir.yaml`   | 单模态 IR  | `train` / `val` → infrared                   |
 | `llvip_dual.yaml` | 双模态融合 | `train_rgb`, `val_rgb`, `train_ir`, `val_ir` |
 
 ---
 
 ## 五、仓库结构
 
-| 内容 | 路径 |
-|------|------|
-| CFT 模块（GPT / Add / Add2） | `ultralytics/nn/modules/cft.py` |
-| 双路模型 | `ultralytics/nn/tasks_dual.py` |
-| 双路 Dataset | `ultralytics/data/dual_stream.py` |
-| CFT Trainer / Validator | `ultralytics/models/yolo/detect/cft_train.py` |
-| 融合模型 yaml | `ultralytics/cfg/models/v8/yolov8l_fusion_{add,transformerx3}_llvip.yaml` |
-| 训练 / 验证入口 | `tools/train_cft.py`、`tools/val_cft.py` |
-| Y5→Y8 GPT 部分加载 | `tools/load_cft_partial.py` |
-| 路径初始化 | `tools/setup_new_machine.sh` |
+| 内容                         | 路径                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| CFT 模块（GPT / Add / Add2） | `ultralytics/nn/modules/cft.py`                                           |
+| 双路模型                     | `ultralytics/nn/tasks_dual.py`                                            |
+| 双路 Dataset                 | `ultralytics/data/dual_stream.py`                                         |
+| CFT Trainer / Validator      | `ultralytics/models/yolo/detect/cft_train.py`                             |
+| 融合模型 yaml                | `ultralytics/cfg/models/v8/yolov8l_fusion_{add,transformerx3}_llvip.yaml` |
+| 训练 / 验证入口              | `tools/train_cft.py`、`tools/val_cft.py`                                  |
+| Y5→Y8 GPT 部分加载           | `tools/load_cft_partial.py`                                               |
+| 路径初始化                   | `tools/setup_new_machine.sh`                                              |
 
 **实现映射（YOLOv5 → YOLOv8）**：
 
-| YOLOv5（CFT 原仓库） | YOLOv8（本仓库） |
-|----------------------|------------------|
-| `Focus` | 首层 `Conv` |
-| `C3` | `C2f` |
-| `SPP` | `SPPF` |
-| `Detect`（anchor-based） | `Detect`（anchor-free） |
-| `Model.forward_once(x, x2)` | `DualDetectionModel` |
+| YOLOv5（CFT 原仓库）        | YOLOv8（本仓库）        |
+| --------------------------- | ----------------------- |
+| `Focus`                     | 首层 `Conv`             |
+| `C3`                        | `C2f`                   |
+| `SPP`                       | `SPPF`                  |
+| `Detect`（anchor-based）    | `Detect`（anchor-free） |
+| `Model.forward_once(x, x2)` | `DualDetectionModel`    |
 
 ---
 
@@ -244,12 +244,12 @@ yolo val \
 
 ### 6.3 超参数说明
 
-| 参数 | 建议值 | 说明 |
-|------|--------|------|
-| `batch` | 1–4（`yolov8l` @ 1024） | 物理 batch；OOM 时降为 1 |
-| `nbs` | 16 或 32 | 名义 batch；内部 `accumulate ≈ round(nbs / batch)` |
-| `workers` | 4（OOM 或 dataloader 报错时 0） | DataLoader 进程数 |
-| `imgsz` | 1024 | 与论文 / Y5 权重一致 |
+| 参数      | 建议值                          | 说明                                               |
+| --------- | ------------------------------- | -------------------------------------------------- |
+| `batch`   | 1–4（`yolov8l` @ 1024）         | 物理 batch；OOM 时降为 1                           |
+| `nbs`     | 16 或 32                        | 名义 batch；内部 `accumulate ≈ round(nbs / batch)` |
+| `workers` | 4（OOM 或 dataloader 报错时 0） | DataLoader 进程数                                  |
+| `imgsz`   | 1024                            | 与论文 / Y5 权重一致                               |
 
 **注意**：Ultralytics 8.x **`yolo train` 不支持 `accumulate=`**；请使用 **`nbs=`** 控制梯度累积。YOLOv5 原仓库使用 `accumulate`，二者不可混用参数名。
 
@@ -354,36 +354,36 @@ python tools/train_cft.py \
 
 ### 7.3 权重使用说明
 
-| 权重 | 用于 YOLOv8 | 说明 |
-|------|-------------|------|
-| `yolov8l.pt` | ✅ | 实验 1–4 的主初始化 |
-| `yolov5l.pt` | ❌ 整模 | 仅 YOLOv5 对照 |
-| `yolov5l_transformerx3_llvip_*.pt` | ❌ 整模 | 架构不兼容；仅 GPT 部分可加载 |
-| 作者 CFT 权重 | ⚠️ 部分 | `tools/load_cft_partial.py` 按 key/shape 匹配 GPT 相关 tensor |
+| 权重                               | 用于 YOLOv8 | 说明                                                          |
+| ---------------------------------- | ----------- | ------------------------------------------------------------- |
+| `yolov8l.pt`                       | ✅          | 实验 1–4 的主初始化                                           |
+| `yolov5l.pt`                       | ❌ 整模     | 仅 YOLOv5 对照                                                |
+| `yolov5l_transformerx3_llvip_*.pt` | ❌ 整模     | 架构不兼容；仅 GPT 部分可加载                                 |
+| 作者 CFT 权重                      | ⚠️ 部分     | `tools/load_cft_partial.py` 按 key/shape 匹配 GPT 相关 tensor |
 
 ### 7.4 实现状态
 
-| 组件 | 状态 |
-|------|------|
-| CFT 模块、`DualDetectionModel`、双路 Dataset | ✅ |
-| 融合 yaml（Add / GPT×3） | ✅ |
-| `train_cft.py` / `val_cft.py` | ✅ |
-| `load_cft_partial.py` | ✅ |
-| 与 YOLOv5 `test.py` 逐 bit 一致 mAP | ⚠️ 默认使用 Ultralytics DetMetrics；跨框架对比需注意评估实现差异 |
+| 组件                                         | 状态                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------- |
+| CFT 模块、`DualDetectionModel`、双路 Dataset | ✅                                                               |
+| 融合 yaml（Add / GPT×3）                     | ✅                                                               |
+| `train_cft.py` / `val_cft.py`                | ✅                                                               |
+| `load_cft_partial.py`                        | ✅                                                               |
+| 与 YOLOv5 `test.py` 逐 bit 一致 mAP          | ⚠️ 默认使用 Ultralytics DetMetrics；跨框架对比需注意评估实现差异 |
 
 ---
 
 ## 八、公平对比与跨框架评估
 
-| 项 | 要求 |
-|----|------|
-| 数据划分 | 与 `llvip_dual.yaml` 四路径一致 |
-| 输入尺寸 | 1024 |
-| 评估集 | `visible/test` + `infrared/test`（3463 对） |
-| NMS | `conf=0.001`, `iou=0.5` |
-| 指标 | mAP@0.5、mAP@0.75、mAP@0.5:0.95 |
-| YOLOv8 组内对比 | 统一使用 `yolo val` / `val_cft.py`，相同 conf/iou |
-| Y8 vs Y5 对比 | 建议注明框架差异；严格对比时可导出权重至原仓库 `test.py` 或统一评估脚本 |
+| 项              | 要求                                                                    |
+| --------------- | ----------------------------------------------------------------------- |
+| 数据划分        | 与 `llvip_dual.yaml` 四路径一致                                         |
+| 输入尺寸        | 1024                                                                    |
+| 评估集          | `visible/test` + `infrared/test`（3463 对）                             |
+| NMS             | `conf=0.001`, `iou=0.5`                                                 |
+| 指标            | mAP@0.5、mAP@0.75、mAP@0.5:0.95                                         |
+| YOLOv8 组内对比 | 统一使用 `yolo val` / `val_cft.py`，相同 conf/iou                       |
+| Y8 vs Y5 对比   | 建议注明框架差异；严格对比时可导出权重至原仓库 `test.py` 或统一评估脚本 |
 
 ---
 
@@ -393,38 +393,38 @@ python tools/train_cft.py \
 
 ### 9.1 YOLOv5 对照（可选，原仓库）
 
-| 实验 ID | 方法 | 权重 | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
-|---------|------|------|--------|---------|------------|------|
-| y5-cft | CFT GPT×3 | 作者权重 | 0.972 | 0.724 | 0.633 | 独立复现 |
-| y5-add | Add | 自训 / 论文 | — | — | — | 论文 mAP@.5=0.958 |
-| y5-rgb | RGB 单模态 | 自训 | | | | |
-| y5-ir | IR 单模态 | 自训 | | | | |
+| 实验 ID | 方法       | 权重        | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注              |
+| ------- | ---------- | ----------- | ------ | ------- | ---------- | ----------------- |
+| y5-cft  | CFT GPT×3  | 作者权重    | 0.972  | 0.724   | 0.633      | 独立复现          |
+| y5-add  | Add        | 自训 / 论文 | —      | —       | —          | 论文 mAP@.5=0.958 |
+| y5-rgb  | RGB 单模态 | 自训        |        |         |            |                   |
+| y5-ir   | IR 单模态  | 自训        |        |         |            |                   |
 
 ### 9.2 YOLOv8 单模态
 
 | 实验 ID | 模态 | batch / nbs | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
-|---------|------|-------------|--------|---------|------------|------|
-| y8-rgb | RGB | 2 / 16 | | | | |
-| y8-ir | IR | 2 / 16 | | | | |
+| ------- | ---- | ----------- | ------ | ------- | ---------- | ---- |
+| y8-rgb  | RGB  | 2 / 16      |        |         |            |      |
+| y8-ir   | IR   | 2 / 16      |        |         |            |      |
 
 ### 9.3 YOLOv8 融合 / CFT
 
-| 实验 ID | 方法 | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
-|---------|------|--------|---------|------------|------|
-| y8-add | 双路 Add | | | | vs 论文 0.958 |
-| y8-cft | GPT×3 | | | | vs 论文 0.975 |
+| 实验 ID | 方法     | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注          |
+| ------- | -------- | ------ | ------- | ---------- | ------------- |
+| y8-add  | 双路 Add |        |         |            | vs 论文 0.958 |
+| y8-cft  | GPT×3    |        |         |            | vs 论文 0.975 |
 
 ### 9.4 汇总
 
-| 方法 | 框架 | mAP@.5 | mAP@.75 | mAP@.5:.95 |
-|------|------|--------|---------|------------|
-| RGB 单模态 | Y8 | | | |
-| IR 单模态 | Y8 | | | |
-| Add 融合 | Y5 | — | — | 0.623（论文） |
-| Add 融合 | Y8 | | | |
-| CFT | Y5 | 0.972 | 0.724 | 0.633 |
-| CFT | Y8 | | | |
-| CFT（论文） | Y5 | 0.975 | 0.729 | 0.636 |
+| 方法        | 框架 | mAP@.5 | mAP@.75 | mAP@.5:.95    |
+| ----------- | ---- | ------ | ------- | ------------- |
+| RGB 单模态  | Y8   |        |         |               |
+| IR 单模态   | Y8   |        |         |               |
+| Add 融合    | Y5   | —      | —       | 0.623（论文） |
+| Add 融合    | Y8   |        |         |               |
+| CFT         | Y5   | 0.972  | 0.724   | 0.633         |
+| CFT         | Y8   |        |         |               |
+| CFT（论文） | Y5   | 0.975  | 0.729   | 0.636         |
 
 ---
 
@@ -463,24 +463,24 @@ python tools/train_cft.py \
 
 ## 十一、故障排查
 
-| 现象 | 可能原因 | 处理 |
-|------|----------|------|
-| 0 images / FileNotFoundError | 未运行 `setup_new_machine.sh` 或 LLVIP 路径错误 | 检查 `machine.env` 与脚本输出计数 |
-| `SyntaxError: accumulate` | 使用了 YOLOv5 参数名 | 改用 `nbs=16` |
-| CUDA OOM @ 1024 | 物理 batch 过大 | `batch=1` 或 `2`；减小 `workers` |
-| dual 训练找不到 IR | `llvip_dual.yaml` 的 `path` 不正确 | `path` 应指向含 `visible/`、`infrared/` 的 LLVIP 根目录 |
-| 首次训练卡在 Downloading | 自动下载 `yolov8l.pt` | 等待完成或手动下载至仓库根目录 |
-| Git push 凭据错误 | token / SSH 配置 | 使用 Personal Access Token 或 SSH key；与 clone 权限无关 |
+| 现象                         | 可能原因                                        | 处理                                                     |
+| ---------------------------- | ----------------------------------------------- | -------------------------------------------------------- |
+| 0 images / FileNotFoundError | 未运行 `setup_new_machine.sh` 或 LLVIP 路径错误 | 检查 `machine.env` 与脚本输出计数                        |
+| `SyntaxError: accumulate`    | 使用了 YOLOv5 参数名                            | 改用 `nbs=16`                                            |
+| CUDA OOM @ 1024              | 物理 batch 过大                                 | `batch=1` 或 `2`；减小 `workers`                         |
+| dual 训练找不到 IR           | `llvip_dual.yaml` 的 `path` 不正确              | `path` 应指向含 `visible/`、`infrared/` 的 LLVIP 根目录  |
+| 首次训练卡在 Downloading     | 自动下载 `yolov8l.pt`                           | 等待完成或手动下载至仓库根目录                           |
+| Git push 凭据错误            | token / SSH 配置                                | 使用 Personal Access Token 或 SSH key；与 clone 权限无关 |
 
 ---
 
 ## 十二、依赖与原仓库对照实验（可选）
 
-| 实验 | 是否需要 [multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) |
-|------|--------------------------------------------------------------------------------------------------|
-| Y8-RGB / Y8-IR / Y8-Add / Y8-CFT | **否**（仅需 LLVIP + 本仓库） |
-| Y5-CFT 论文数值复现 | **是**（作者权重 + `test.py`） |
-| Y8-CFT 方案 B（Y5 GPT 初始化） | **是**（作者 `.pt` 权重文件） |
+| 实验                             | 是否需要 [multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Y8-RGB / Y8-IR / Y8-Add / Y8-CFT | **否**（仅需 LLVIP + 本仓库）                                                                     |
+| Y5-CFT 论文数值复现              | **是**（作者权重 + `test.py`）                                                                    |
+| Y8-CFT 方案 B（Y5 GPT 初始化）   | **是**（作者 `.pt` 权重文件）                                                                     |
 
 YOLOv5 对照示例（在原仓库根目录）：
 
@@ -495,9 +495,9 @@ python3 test.py \
 
 ## 十三、变更日志
 
-| 日期 | 内容 |
-|------|------|
-| 2025-05-27 | 初版：YOLOv8 单模态、CFT 迁移、LLVIP 实验流程 |
+| 日期       | 内容                                                                  |
+| ---------- | --------------------------------------------------------------------- |
+| 2025-05-27 | 初版：YOLOv8 单模态、CFT 迁移、LLVIP 实验流程                         |
 | 2025-05-27 | CFT 模块、DualDetectionModel、双路数据、`train_cft.py` / `val_cft.py` |
 | 2025-05-27 | Git 发布：`TP666-bot/ultralytics-yolov8-cft`，分支 `cft-yolov8-llvip` |
-| 2025-05-27 | 文档修订：面向公开复现，补充实验设计与评估协议 |
+| 2025-05-27 | 文档修订：面向公开复现，补充实验设计与评估协议                        |

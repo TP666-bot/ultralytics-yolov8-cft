@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate YOLOv8 + CFT dual-stream checkpoint on LLVIP test split.
+r"""Validate YOLOv8 + CFT dual-stream checkpoint on LLVIP test split.
 
 Example:
   python tools/val_cft.py \\

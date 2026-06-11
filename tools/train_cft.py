@@ -49,7 +49,10 @@ def main():
         overrides["model"] = "ultralytics/cfg/models/v8/yolov8l_fusion_add_llvip.yaml"
     if "data" not in overrides:
         overrides["data"] = "ultralytics/cfg/datasets/llvip_dual.yaml"
-    if "pretrained" not in overrides and not str(overrides.get("model", "")).endswith(".pt"):
+    model_arg = str(overrides.get("model", ""))
+    if model_arg.endswith(".pt"):
+        overrides.setdefault("pretrained", False)  # init/resume checkpoint already contains weights
+    elif "pretrained" not in overrides:
         overrides["pretrained"] = "yolov8l.pt"
     overrides.setdefault("task", "detect")
     overrides.setdefault("epochs", 200)

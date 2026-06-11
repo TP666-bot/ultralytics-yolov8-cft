@@ -42,7 +42,10 @@ def main():
     overrides.setdefault("iou", 0.5)
     trainer = CFTDetectionTrainer(cfg=DEFAULT_CFG, overrides=overrides)
     trainer.setup_val()
-    trainer.validate()
+    # Pass trainer so validator reuses check_dual_det_dataset data + pre-built dual dataloader.
+    # model= alone triggers check_det_dataset, which rejects llvip_dual.yaml (no train:/val: keys).
+    metrics = trainer.validator(trainer=trainer)
+    return metrics
 
 
 if __name__ == "__main__":

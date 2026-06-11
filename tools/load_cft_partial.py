@@ -15,6 +15,19 @@ sys.path.insert(0, str(ROOT))
 from ultralytics.nn.tasks_dual import DualDetectionModel
 
 
+def _ensure_yolov5_import_path() -> None:
+    """YOLOv5 CFT .pt pickles reference ``models.*``; add sibling repo if present."""
+    for candidate in (
+        ROOT.parent / "multispectral-object-detection",
+        ROOT / "multispectral-object-detection",
+    ):
+        if (candidate / "models" / "yolo.py").exists() or (candidate / "models" / "common.py").exists():
+            p = str(candidate.resolve())
+            if p not in sys.path:
+                sys.path.insert(0, p)
+            return
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--y8-cfg", required=True)
@@ -26,6 +39,7 @@ def main():
     model = DualDetectionModel(args.y8_cfg, ch=3, verbose=True)
     model.load(args.y8_weights)
 
+    _ensure_yolov5_import_path()
     ckpt = torch.load(args.y5_cft, map_location="cpu", weights_only=False)
     y5_sd = ckpt["model"].float().state_dict() if isinstance(ckpt, dict) and "model" in ckpt else ckpt
     state = model.state_dict()
@@ -34,7 +48,6 @@ def main():
     for k, v in y5_sd.items():
         if not any(x in k for x in keys):
             continue
-        # map y5 module index to y8 by suffix match
         suffix = k.split("model.", 1)[-1]
         for tk in state:
             if tk.endswith(suffix) or suffix in tk:
@@ -45,7 +58,7 @@ def main():
     model.load_state_dict(state, strict=False)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({"model": model.half(), "epoch": -1}, out)
+    torch.save({"model": model.float(), "epoch": -1}, out)
     print(f"Saved {out} with {n} GPT-related tensors from Y5 CFT")
 
 

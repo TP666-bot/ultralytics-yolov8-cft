@@ -125,7 +125,11 @@ class CFTDetectionTrainer(DetectionTrainer):
 
 
 class CFTDetectionValidator(DetectionValidator):
-    """Validate dual-stream models (RGB + IR)."""
+    """Validate dual-stream models (RGB + IR).
+
+    Standalone ``tools/val_cft.py`` must call with ``trainer=`` (not ``model=`` alone) so
+    ``llvip_dual.yaml`` is read via ``check_dual_det_dataset`` and the dual dataloader is reused.
+    """
 
     def __call__(self, trainer=None, model=None):
         if trainer is not None:

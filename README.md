@@ -10,7 +10,7 @@
 [![Dataset](https://img.shields.io/badge/dataset-LLVIP-green)](https://github.com/bupt-ai-cz/LLVIP)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-lightgrey)](https://github.com/ultralytics/ultralytics/blob/main/LICENSE)
 
-[English Abstract](#abstract) · [快速开始](#quick-start) · [完整文档](cft_yolov8_config.md) · [CFT 原论文](https://arxiv.org/abs/2111.00273)
+[English Abstract](#abstract) · [快速开始](#quick-start) · [实验结果](#results) · [完整文档](cft_yolov8_config.md) · [CFT 原论文](https://arxiv.org/abs/2111.00273)
 
 </div>
 
@@ -20,9 +20,17 @@
 
 本仓库在 **[Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics)** 框架上，将 **[Cross-Modality Fusion Transformer (CFT)](https://arxiv.org/abs/2111.00273)** 从 YOLOv5 双路架构迁移至 YOLOv8，并在 **LLVIP** 可见光–红外配对数据集上建立可复现的消融实验流程。
 
-CFT 通过 Transformer 自注意力在 P3/P4/P5 多尺度特征上同时建模 **模态内** 与 **模态间** 依赖，显著增强低照度场景下的行人检测鲁棒性。本工作保留 CFT 融合思想，将 backbone 中的 `C3/SPP` 替换为 YOLOv8 的 `C2f/SPPF`，并扩展双路数据加载、融合 Trainer 与验证流程，便于与 YOLOv8 单模态基线及 YOLOv5+CFT 原实现进行公平对比。
+CFT 通过 Transformer 自注意力在 P3/P4/P5 多尺度特征上同时建模 **模态内** 与 **模态间** 依赖，显著增强低照度场景下的行人检测鲁棒性。本工作保留 CFT 融合思想，将 backbone 中的 `C3/SPP` 替换为 YOLOv8 的 `C2f/SPPF`，并扩展双路同步增强、融合 Trainer 与论文协议验证脚本（`val_cft.py`），便于与 YOLOv8 单模态基线及 YOLOv5+CFT 原实现进行公平对比。
 
-> **说明**：本仓库为研究与复现实验分支（`cft-yolov8-llvip`），不修改 [DocF/multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) 原仓库；后者仍作为 YOLOv5+CFT 参考实现与对照实验来源。
+**主要成果（LLVIP test，3463 图，`val_cft.py`，conf=0.001，iou=0.5，imgsz=1024）**：
+
+| 方法 | 框架 | mAP@0.5 | mAP@0.5:0.95 |
+|------|------|---------|--------------|
+| CFT（论文） | YOLOv5 | 0.975 | 0.636 |
+| CFT（作者权重复现） | YOLOv5 | 0.972 | 0.633 |
+| **CFT（本仓库 y8_cft_v2）** | **YOLOv8** | **0.973** | **0.668** |
+
+> **说明**：本仓库为研究与复现实验分支（`cft-yolov8-llvip`），不修改 [DocF/multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) 原仓库；后者仍作为 YOLOv5+CFT 参考实现与对照实验来源。实现细节与 P1–P5 改进见 [`tp_improve.md`](tp_improve.md)。
 
 ---
 
@@ -53,32 +61,37 @@ CFT 原论文方法示意图见官方仓库：[cft.png](https://github.com/DocF/
 |------|------|------|
 | CFT 融合层 | `ultralytics/nn/modules/cft.py` | `GPT`、`Add`、`Add2` |
 | 双路模型 | `ultralytics/nn/tasks_dual.py` | RGB/IR 双流 `forward_once` |
-| 双路数据 | `ultralytics/data/dual_stream.py` | 成对 RGB+IR 加载 |
-| CFT 训练器 | `ultralytics/models/yolo/detect/cft_train.py` | 扩展 `DetectionTrainer` |
+| 双路数据与增强 | `ultralytics/data/dual_stream.py`、`dual_augment.py` | 成对 RGB+IR、同步 Mosaic/Affine |
+| CFT 训练/验证 | `ultralytics/models/yolo/detect/cft_train.py` | 冻结 backbone、`val_cft` 双路推理 |
+| 训练/评估入口 | `tools/train_cft.py`、`tools/val_cft.py` | SGD 默认、论文协议评估 |
+| Y5→Y8 GPT 初始化 | `tools/load_cft_partial.py` | 可选方案 B |
 | 融合配置 | `ultralytics/cfg/models/v8/yolov8l_fusion_*.yaml` | Add / GPT×3 |
-| 实验文档 | [`cft_yolov8_config.md`](cft_yolov8_config.md) | 环境、命令、消融、迁移 |
+| 实验文档 | [`cft_yolov8_config.md`](cft_yolov8_config.md) | 环境、命令、消融表、故障排查 |
 
 ---
 
-## Experiments (LLVIP, imgsz=1024)
+## Results
 
-与论文消融逻辑对齐的四组 **YOLOv8** 实验：
+与论文消融逻辑对齐的四组 **YOLOv8** 实验（完整表见 [`cft_yolov8_config.md` §9](cft_yolov8_config.md#九实验记录表)）：
 
-| ID | 实验 | 模态 / 融合 | 入口 |
-|----|------|-------------|------|
-| 1 | **Y8-RGB** | 单路可见光 | `yolo train` + `llvip_rgb.yaml` |
-| 2 | **Y8-IR** | 单路红外 | `yolo train` + `llvip_ir.yaml` |
-| 3 | **Y8-Add** | 双路 + 逐层 Add | `python tools/train_cft.py` + fusion Add yaml |
-| 4 | **Y8-CFT** | 双路 + GPT×3 | `python tools/train_cft.py` + fusion CFT yaml |
+| ID | 实验 | 模态 / 融合 | mAP@0.5 | 状态 |
+|----|------|-------------|---------|------|
+| 1 | **Y8-RGB** | 单路可见光 | — | 待填 |
+| 2 | **Y8-IR** | 单路红外 | ~0.958 | 训练 val |
+| 3 | **Y8-Add** | 双路 + 逐层 Add | — | P1 增强后待重训 |
+| 4 | **Y8-CFT** | 双路 + GPT×3 | **0.973** | ✅ 论文量级（`y8_cft_v2`） |
 
-**YOLOv5+CFT 参考结果**（原仓库作者权重，独立复现）：
+**Y8-CFT v2 正式指标**（`best.pt`，epoch ~51 峰值）：
 
-| 指标 | 复现值 | 论文 README |
-|------|--------|-------------|
-| mAP@0.5 | **0.972** | 0.975 |
-| mAP@0.5:0.95 | **0.633** | 0.636 |
+| P | R | mAP@0.5 | mAP@0.5:0.95 |
+|---|---|---------|--------------|
+| 0.967 | 0.936 | **0.973** | **0.668** |
 
-YOLOv8 为独立架构下的消融研究；完整实验协议见 [`cft_yolov8_config.md`](cft_yolov8_config.md)。
+**YOLOv5+CFT 参考**（原仓库作者权重，`test.py` 独立复现）：
+
+| mAP@0.5 | mAP@0.5:0.95 |
+|---------|--------------|
+| 0.972 | 0.633 |
 
 ---
 
@@ -119,25 +132,37 @@ pip install torch torchvision   # 按 https://pytorch.org 选择 CUDA 版本
 pip install -e .
 ```
 
-### 5. 训练示例（Y8-RGB，8GB 显存）
-
-```bash
-yolo train model=yolov8l.pt data=ultralytics/cfg/datasets/llvip_rgb.yaml \
-  epochs=200 imgsz=1024 batch=2 nbs=16 workers=4 device=0 \
-  project=runs/llvip name=y8_rgb exist_ok=True
-```
-
-双路 CFT 融合：
+### 5. 训练 Y8-CFT（8 GB GPU 推荐）
 
 ```bash
 python tools/train_cft.py \
   model=ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml \
   data=ultralytics/cfg/datasets/llvip_dual.yaml \
-  pretrained=yolov8l.pt epochs=200 imgsz=1024 batch=2 nbs=16 device=0 \
-  project=runs/llvip name=y8_cft exist_ok=True
+  pretrained=yolov8l.pt epochs=200 imgsz=1024 batch=1 nbs=16 workers=2 device=0 \
+  project=runs/llvip name=y8_cft_v2 exist_ok=True
 ```
 
-更多命令、显存建议、新机器 Git 迁移 → **[`cft_yolov8_config.md`](cft_yolov8_config.md)**
+epoch 11 backbone 解冻 OOM 时续训：
+
+```bash
+python tools/train_cft.py \
+  resume=runs/detect/runs/llvip/y8_cft_v2/weights/last.pt \
+  batch=1 nbs=16 freeze_epochs=0 workers=2 device=0 \
+  project=runs/llvip name=y8_cft_v2 exist_ok=True
+```
+
+### 6. 论文协议评估
+
+```bash
+python tools/val_cft.py \
+  model=runs/detect/runs/llvip/y8_cft_v2/weights/best.pt \
+  data=ultralytics/cfg/datasets/llvip_dual.yaml \
+  imgsz=1024 batch=1 device=0 conf=0.001 iou=0.5
+```
+
+> 报告指标以 **`best.pt` + `val_cft.py`** 为准；训练日志 `results.csv` 使用 iou=0.7，数值不可直接与论文对比。
+
+单模态基线、Add 消融、Y5 GPT 初始化（方案 B）→ **[`cft_yolov8_config.md`](cft_yolov8_config.md)**
 
 ---
 
@@ -145,7 +170,8 @@ python tools/train_cft.py \
 
 | 文档 | 内容 |
 |------|------|
-| [`cft_yolov8_config.md`](cft_yolov8_config.md) | YOLOv8 实验全流程、消融表、4060 Ti 显存、Git 迁移 |
+| [`cft_yolov8_config.md`](cft_yolov8_config.md) | 实验协议、消融设计、结果表、复现命令、故障排查 |
+| [`tp_improve.md`](tp_improve.md) | P1–P5 代码级改进说明（双路增强、SGD、freeze、val 修复） |
 | [`tools/setup_new_machine.sh`](tools/setup_new_machine.sh) | 新机器路径与 symlink 自动生成 |
 | [Ultralytics Docs](https://docs.ultralytics.com/) | 上游 YOLOv8 通用 API |
 

@@ -62,7 +62,10 @@ CFT（Cross-Modality Fusion Transformer）在 YOLOv5 双路检测器上，于 P3
 | 输入尺寸 | `imgsz=1024` | 与作者 LLVIP CFT 权重及论文设置一致 |
 | 训练轮数 | `epochs=200` | 与论文 LLVIP 实验一致 |
 | 名义 batch | `nbs=16`（可调至 32） | Ultralytics 梯度累积；等效 batch ≈ `nbs` |
-| 物理 batch | `batch=1~4` | 依 GPU 显存调整，见 7.4 |
+| 物理 batch | `batch=1`（8 GB + Y8l-CFT @1024） | 依 GPU 显存调整；CFT 推荐 `batch=1` + `nbs=16`，见 7.4 |
+| 优化器 | `optimizer=SGD` | **禁止** `optimizer=auto`（8.4 MuSGD 与 GPT 不兼容） |
+| 学习率 | `lr0=0.005`, `momentum=0.937` | `train_cft.py` 默认 |
+| Backbone 冻结 | `freeze_epochs=10`（可选） | 前 10 epoch 冻结层 0–19；OOM 续训用 `freeze_epochs=0` |
 | NMS | `conf=0.001`, `iou=0.5` | 对齐原仓库 `test.py` |
 | 指标 | P, R, mAP@0.5, mAP@0.75, mAP@0.5:0.95 | 检测标准 COCO 风格指标 |
 | 标签 | RGB 侧 `.txt`（YOLO 格式） | 双模态共用 RGB 侧框；IR 同 basename |
@@ -71,11 +74,11 @@ CFT（Cross-Modality Fusion Transformer）在 YOLOv5 双路检测器上，于 P3
 
 ### 2.3 假设（可检验命题）
 
-| 假设 | 预期 |
-|------|------|
-| H1 | 双路 Add（Y8-Add）优于单模态（Y8-RGB / Y8-IR） |
-| H2 | CFT（Y8-CFT）优于 Add（Y8-Add） |
-| H3 | Y8-CFT 相对 Y5-CFT 论文 mAP@0.5（≈0.975）处于合理接近区间，或揭示架构迁移带来的差异 |
+| 假设 | 预期 | 状态 |
+|------|------|------|
+| H1 | 双路 Add（Y8-Add）优于单模态（Y8-RGB / Y8-IR） | 待 Y8-Add 重训后验证 |
+| H2 | CFT（Y8-CFT）优于 Add（Y8-Add） | 待 Y8-Add 重训后验证 |
+| H3 | Y8-CFT 相对 Y5-CFT 论文 mAP@0.5（≈0.975）处于合理接近区间 | **已验证**：`y8_cft_v2` mAP@0.5=**0.973**（§9.3） |
 
 ### 2.4 论文参考数值（LLVIP，YOLOv5l）
 
@@ -312,7 +315,9 @@ python tools/val_cft.py \
 
 ### 7.2 实验 4：Y8-CFT
 
-**方案 A（推荐首轮）**：仅 YOLOv8 预训练 + GPT 随机初始化
+**方案 A（推荐，已复现论文量级）**：YOLOv8 预训练 + GPT 随机初始化 + P1–P5 训练管线（见 [`tp_improve.md`](tp_improve.md)）
+
+8 GB GPU（如 RTX 4060 Ti）推荐配置：
 
 ```bash
 python tools/train_cft.py \
@@ -321,36 +326,58 @@ python tools/train_cft.py \
   pretrained=yolov8l.pt \
   epochs=200 \
   imgsz=1024 \
-  batch=2 \
+  batch=1 \
   nbs=16 \
-  workers=4 \
+  workers=2 \
   device=0 \
   project=runs/llvip \
-  name=y8_cft \
+  name=y8_cft_v2 \
   exist_ok=True
 ```
 
-**方案 B（可选）**：从 YOLOv5 CFT 权重 **部分加载 GPT**（需原仓库作者权重文件）
+**论文协议正式评估**（必须用 `best.pt`，不要用 `last.pt`）：
 
 ```bash
+python tools/val_cft.py \
+  model=runs/detect/runs/llvip/y8_cft_v2/weights/best.pt \
+  data=ultralytics/cfg/datasets/llvip_dual.yaml \
+  imgsz=1024 \
+  batch=1 \
+  device=0 \
+  conf=0.001 \
+  iou=0.5
+```
+
+**续训**（epoch 11 backbone 解冻后 OOM 时）：
+
+```bash
+python tools/train_cft.py \
+  resume=runs/detect/runs/llvip/y8_cft_v2/weights/last.pt \
+  batch=1 nbs=16 freeze_epochs=0 workers=2 device=0 \
+  project=runs/llvip name=y8_cft_v2 exist_ok=True
+```
+
+> `train_cft.py` 默认：`optimizer=SGD`、`lr0=0.005`、`freeze_epochs=10`（脚本专用参数，勿传给 `yolo train`）。训练中 `results.csv` 的 mAP 使用 **iou=0.7**；对外报告以 **`val_cft.py`（iou=0.5）** 为准。
+
+**方案 B（可选，冲击 >0.975）**：从 YOLOv5 CFT 权重 **部分加载 GPT**（需 [multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) 作者权重，与本仓库平级 clone 时可自动解析 `models.*` pickle）
+
+```bash
+# 将 YOLOv5 仓库置于 <WORKSPACE>/multispectral-object-detection/ 后可直接运行
 python tools/load_cft_partial.py \
   --y8-cfg ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml \
   --y8-weights yolov8l.pt \
-  --y5-cft /path/to/yolov5l_transformerx3_llvip_s1024_bs32_e200.pt \
-  --out runs/llvip/y8_cft_init.pt
+  --y5-cft ../multispectral-object-detection/yolov5l_transformerx3_llvip_s1024_bs32_e200.pt \
+  --out runs/llvip/y8_cft_y5gpt_init.pt
 
 python tools/train_cft.py \
-  model=runs/llvip/y8_cft_init.pt \
+  model=runs/llvip/y8_cft_y5gpt_init.pt \
   data=ultralytics/cfg/datasets/llvip_dual.yaml \
-  epochs=200 \
-  imgsz=1024 \
-  batch=2 \
-  nbs=16 \
-  device=0 \
-  project=runs/llvip \
-  name=y8_cft_from_y5gpt \
-  exist_ok=True
+  epochs=200 imgsz=1024 batch=1 nbs=32 workers=2 device=0 \
+  freeze_epochs=10 patience=25 \
+  project=runs/llvip name=y8_cft_y5gpt exist_ok=True
 ```
+
+> `model=*.pt` 时 `train_cft.py` 自动设 `pretrained=False`，避免覆盖已写入的 Y5 GPT 权重。首 epoch `cls_loss` 可能高于方案 A（检测头随机、GPT 已预热），属正常现象。
 
 ### 7.3 权重使用说明
 
@@ -369,6 +396,7 @@ python tools/train_cft.py \
 | 融合 yaml（Add / GPT×3） | ✅ |
 | `train_cft.py` / `val_cft.py` | ✅ |
 | `load_cft_partial.py` | ✅ |
+| `sweep_val_cft.py` | ✅ NMS/conf 敏感性扫描 |
 | 与 YOLOv5 `test.py` 逐 bit 一致 mAP | ⚠️ 默认使用 Ultralytics DetMetrics；跨框架对比需注意评估实现差异 |
 
 ---
@@ -404,27 +432,50 @@ python tools/train_cft.py \
 
 | 实验 ID | 模态 | batch / nbs | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
 |---------|------|-------------|--------|---------|------------|------|
-| y8-rgb | RGB | 2 / 16 | | | | |
-| y8-ir | IR | 2 / 16 | | | | |
+| y8-rgb | RGB | 2 / 16 | | | | 待填 |
+| y8-ir | IR | 2 / 16 | ~0.958 | — | — | 100e，`yolo train`，训练 val |
 
 ### 9.3 YOLOv8 融合 / CFT
 
-| 实验 ID | 方法 | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
-|---------|------|--------|---------|------------|------|
-| y8-add | 双路 Add | | | | vs 论文 0.958 |
-| y8-cft | GPT×3 | | | | vs 论文 0.975 |
+| 实验 ID | 方法 | P | R | mAP@.5 | mAP@.5:.95 | 评估协议 | 备注 |
+|---------|------|---|---|--------|------------|----------|------|
+| y8-add | 双路 Add | — | — | | | `val_cft` | 旧管线曾 ~0.69；P1 增强后待重训 |
+| **y8-cft-v2** | **GPT×3** | **0.967** | **0.936** | **0.973** | **0.668** | **`val_cft` best.pt** | **已达论文量级** |
+
+**y8_cft_v2 训练摘要**（`runs/detect/runs/llvip/y8_cft_v2/`）：
+
+| 项 | 值 |
+|----|-----|
+| 配置 | `batch=1`, `nbs=16`, `SGD lr0=0.005`, `freeze_epochs=10` → epoch 11 续训 `freeze_epochs=0` |
+| 训练 val 峰值 mAP@.5 | **0.973**（~epoch 50，`best.pt`，iou=0.7） |
+| 正式 test（`val_cft`） | P=0.967, R=0.936, mAP@.5=**0.973**, mAP@.5:.95=**0.668** |
+| 与论文 Y5-CFT | mAP@.5 差 **0.002**（0.973 vs 0.975）；与 Y5 作者权重复现 **0.972** 持平 |
+| 说明 | epoch 80+ 训练 val 缓降（过拟合）；**报告以 `best.pt` 为准**，不必追 `last.pt` |
 
 ### 9.4 汇总
 
 | 方法 | 框架 | mAP@.5 | mAP@.75 | mAP@.5:.95 |
 |------|------|--------|---------|------------|
 | RGB 单模态 | Y8 | | | |
-| IR 单模态 | Y8 | | | |
-| Add 融合 | Y5 | — | — | 0.623（论文） |
-| Add 融合 | Y8 | | | |
+| IR 单模态 | Y8 | ~0.958 | — | — |
+| Add 融合 | Y5 | 0.958 | — | 0.623（论文） |
+| Add 融合 | Y8 | | | 待 P1 增强后重训 |
 | CFT | Y5 | 0.972 | 0.724 | 0.633 |
-| CFT | Y8 | | | |
+| **CFT** | **Y8** | **0.973** | — | **0.668** |
 | CFT（论文） | Y5 | 0.975 | 0.729 | 0.636 |
+
+> Y8-CFT 的 **0.973 / 0.668** 来自 `val_cft.py`：`conf=0.001`, `iou=0.5`, `imgsz=1024`, LLVIP test（3463 图）。mAP@0.75 未在 `val_cft` 默认输出中单独列出。
+
+### 9.5 推理协议敏感性（y8_cft_v2 best.pt）
+
+| conf | NMS iou | mAP@0.5 | mAP@0.5:0.95 | 说明 |
+|------|---------|---------|--------------|------|
+| 0.001 | 0.5 | **0.973** | 0.668 | **论文报告协议（默认）** |
+| 0.001 | 0.6 | 0.973 | 0.672 | YOLOv5 `test.py` NMS 默认 |
+| 0.0005 | 0.5 | 0.973 | 0.669 | conf 降低几乎无变化 |
+| 0.001 | 0.5 | 0.953 | 0.633 | **`last.pt`（过拟合，勿用于报告）** |
+
+> 推理调参无法弥补训练上限；epoch 50 后 val 回落时务必使用 `best.pt`。
 
 ---
 
@@ -451,12 +502,23 @@ python tools/train_cft.py \
   epochs=200 imgsz=1024 batch=2 nbs=16 workers=4 device=0 \
   project=runs/llvip name=y8_add exist_ok=True
 
-# 实验 4：Y8-CFT
+# 实验 4：Y8-CFT（8 GB 推荐）
 python tools/train_cft.py \
   model=ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml \
   data=ultralytics/cfg/datasets/llvip_dual.yaml pretrained=yolov8l.pt \
-  epochs=200 imgsz=1024 batch=2 nbs=16 workers=4 device=0 \
-  project=runs/llvip name=y8_cft exist_ok=True
+  epochs=200 imgsz=1024 batch=1 nbs=16 workers=2 device=0 \
+  project=runs/llvip name=y8_cft_v2 exist_ok=True
+
+# 论文协议评估
+python tools/val_cft.py \
+  model=runs/detect/runs/llvip/y8_cft_v2/weights/best.pt \
+  data=ultralytics/cfg/datasets/llvip_dual.yaml \
+  imgsz=1024 batch=1 device=0 conf=0.001 iou=0.5
+
+# NMS/conf 敏感性扫描（可选）
+python tools/sweep_val_cft.py \
+  model=runs/detect/runs/llvip/y8_cft_v2/weights/best.pt \
+  sweep=0.001:0.5,0.001:0.6,0.0005:0.5 imgsz=1024 batch=1 device=0
 ```
 
 ---
@@ -467,7 +529,13 @@ python tools/train_cft.py \
 |------|----------|------|
 | 0 images / FileNotFoundError | 未运行 `setup_new_machine.sh` 或 LLVIP 路径错误 | 检查 `machine.env` 与脚本输出计数 |
 | `SyntaxError: accumulate` | 使用了 YOLOv5 参数名 | 改用 `nbs=16` |
-| CUDA OOM @ 1024 | 物理 batch 过大 | `batch=1` 或 `2`；减小 `workers` |
+| `SyntaxError: freeze_epochs` | 传给 Ultralytics `get_cfg` | 仅用 `train_cft.py`；该参数由脚本内部处理 |
+| `AssertionError` in `muon.py` | `optimizer=auto` → MuSGD | 使用 `optimizer=SGD`（`train_cft.py` 默认） |
+| 验证 `Add2` 尺寸不匹配 | val 只 letterbox RGB | 已修复：`DualLetterBox`（见 `tp_improve.md`） |
+| epoch 11 OOM | backbone 解冻显存翻倍 | `batch=1` + `resume=.../last.pt freeze_epochs=0` |
+| `val_cft` `'train:' key missing` | `model=` 触发标准 `check_det_dataset` | 已修复：调用 `validator(trainer=trainer)`，复用 `check_dual_det_dataset` |
+| `val_cft` 末尾 AttributeError | 独立验证无 `trainer.loss` | 同上，传 `trainer=` 走训练式验证分支 |
+| CUDA OOM @ 1024 | 物理 batch 过大 | `batch=1`；减小 `workers` |
 | dual 训练找不到 IR | `llvip_dual.yaml` 的 `path` 不正确 | `path` 应指向含 `visible/`、`infrared/` 的 LLVIP 根目录 |
 | 首次训练卡在 Downloading | 自动下载 `yolov8l.pt` | 等待完成或手动下载至仓库根目录 |
 | Git push 凭据错误 | token / SSH 配置 | 使用 Personal Access Token 或 SSH key；与 clone 权限无关 |
@@ -501,3 +569,5 @@ python3 test.py \
 | 2025-05-27 | CFT 模块、DualDetectionModel、双路数据、`train_cft.py` / `val_cft.py` |
 | 2025-05-27 | Git 发布：`TP666-bot/ultralytics-yolov8-cft`，分支 `cft-yolov8-llvip` |
 | 2025-05-27 | 文档修订：面向公开复现，补充实验设计与评估协议 |
+| 2025-05-27 | **y8_cft_v2**：`val_cft` mAP@.5=**0.973**；更新 §7.2 / §9 / 训练默认值与故障排查 |
+| 2025-05-27 | 修复 `val_cft`（`trainer=` 双路数据）；`load_cft_partial` 自动 YOLOv5 路径；§9.5 NMS 扫描；README 结果表 |

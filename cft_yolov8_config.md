@@ -561,6 +561,111 @@ python3 test.py \
 
 ---
 
+## 十四、VEDAI 数据集扩展（跨数据集验证）
+
+在 LLVIP 达到论文量级（mAP@0.5=0.973）后，可在 **VEDAI** 上复现原论文第二组实验，验证 CFT 在 **9 类车辆** 场景下的泛化增益。
+
+### 14.1 原工程（DocF/multispectral-object-detection）参考
+
+| 项目 | 内容 |
+|------|------|
+| 数据配置 | `data/multispectral/vedai_color_2.yaml` |
+| CFT 模型 | `models/transformer/yolov5s_fusion_transformerx3_vedai.yaml` |
+| Add 基线 | `models/transformer/yolov5s_fusion_add_vedai.yaml` |
+| 输入尺寸 | **1024×1024**（`Vehicules1024`） |
+| 划分 | `fold01.txt`（train 128）/ `fold01test.txt`（val 128） |
+| 配对方式 | RGB/IR **独立 list 文件**，按排序后索引配对（非路径替换） |
+
+**论文报告指标（YOLOv5s）**：
+
+| CFT | mAP@0.5 | mAP@0.75 | mAP@0.5:0.95 |
+|-----|---------|----------|--------------|
+| 否（Add） | 79.7 | 47.7 | 46.8 |
+| 是（GPT×3） | **85.3** (+5.6) | **65.9** (+18.2) | **56.0** (+9.2) |
+
+下载：[https://downloads.greyc.fr/vedai/](https://downloads.greyc.fr/vedai/)
+
+### 14.2 本仓库 YOLOv8 对应物
+
+| 组件 | 路径 |
+|------|------|
+| 数据 yaml 模板 | `ultralytics/cfg/datasets/vedai_dual.yaml` |
+| 路径配置脚本 | `tools/setup_vedai.sh` |
+| 配对检查 | `tools/check_vedai_pairs.py` |
+| Y8-Add | `yolov8s_fusion_add_vedai.yaml` |
+| Y8-CFT | `yolov8s_fusion_transformerx3_vedai.yaml` |
+
+目录结构（YOLO 格式标签与 color 图同目录、同名 `.txt`）：
+
+```text
+<VEDAI_ROOT>/Vehicules1024/Images/
+├── color/
+│   ├── fold01.txt          # 每行 ./00000000_co.png
+│   ├── fold01test.txt
+│   ├── 00000000_co.png
+│   └── 00000000_co.txt     # YOLO 标签
+└── ir/
+    ├── fold01.txt          # 每行 ./00000000_ir.png
+    ├── fold01test.txt
+    └── 00000000_ir.png
+```
+
+### 14.3 准备步骤
+
+1. 下载 VEDAI 并转换为 **YOLO 格式**（见 [YOLOv5 Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data) 与原仓库 README）。
+2. 确保 `color/`、`ir/` 下各有 `fold01.txt` / `fold01test.txt`（可与原工程 list 一致）。
+3. 配置路径并生成 yaml：
+
+```bash
+# tools/machine.env 中可选：VEDAI_ROOT=/path/to/VEDAI
+bash tools/setup_vedai.sh
+python tools/check_vedai_pairs.py --data ultralytics/cfg/datasets/vedai_dual.yaml
+```
+
+### 14.4 训练与评估命令
+
+**Y8-Add（消融基线）**：
+
+```bash
+python tools/train_cft.py \
+  model=ultralytics/cfg/models/v8/yolov8s_fusion_add_vedai.yaml \
+  data=ultralytics/cfg/datasets/vedai_dual.yaml \
+  pretrained=yolov8s.pt epochs=100 imgsz=1024 batch=4 nbs=16 workers=4 device=0 \
+  project=runs/vedai name=y8_add exist_ok=True
+```
+
+**Y8-CFT（主实验，对齐论文 yolov5s + transformerx3）**：
+
+```bash
+python tools/train_cft.py \
+  model=ultralytics/cfg/models/v8/yolov8s_fusion_transformerx3_vedai.yaml \
+  data=ultralytics/cfg/datasets/vedai_dual.yaml \
+  pretrained=yolov8s.pt epochs=100 imgsz=1024 batch=4 nbs=16 workers=4 device=0 \
+  freeze_epochs=10 project=runs/vedai name=y8_cft exist_ok=True
+```
+
+**论文协议评估**：
+
+```bash
+python tools/val_cft.py \
+  model=runs/detect/runs/vedai/y8_cft/weights/best.pt \
+  data=ultralytics/cfg/datasets/vedai_dual.yaml \
+  imgsz=1024 batch=4 device=0 conf=0.001 iou=0.5
+```
+
+> VEDAI 体量小（256 图/模态），训练快于 LLVIP；建议同样以 **`best.pt` + `val_cft.py`** 报告，并与上表 YOLOv5 行对照（允许框架差异）。
+
+### 14.5 VEDAI 实验记录表（待填）
+
+| 实验 ID | 方法 | 框架 | mAP@.5 | mAP@.75 | mAP@.5:.95 | 备注 |
+|---------|------|------|--------|---------|------------|------|
+| y5-add | Add | YOLOv5s | 79.7 | 47.7 | 46.8 | 论文 |
+| y5-cft | GPT×3 | YOLOv5s | **85.3** | **65.9** | **56.0** | 论文 |
+| y8-add | Add | YOLOv8s | | | | 待训 |
+| y8-cft | GPT×3 | YOLOv8s | | | | 待训 |
+
+---
+
 ## 十三、变更日志
 
 | 日期 | 内容 |
@@ -571,3 +676,4 @@ python3 test.py \
 | 2025-05-27 | 文档修订：面向公开复现，补充实验设计与评估协议 |
 | 2025-05-27 | **y8_cft_v2**：`val_cft` mAP@.5=**0.973**；更新 §7.2 / §9 / 训练默认值与故障排查 |
 | 2025-05-27 | 修复 `val_cft`（`trainer=` 双路数据）；`load_cft_partial` 自动 YOLOv5 路径；§9.5 NMS 扫描；README 结果表 |
+| 2025-05-27 | **VEDAI**：双路 list 配对、`vedai_dual.yaml`、Y8s Add/CFT 模型、`setup_vedai.sh`（§十四） |

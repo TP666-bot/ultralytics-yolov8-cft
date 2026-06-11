@@ -164,6 +164,19 @@ python tools/val_cft.py \
 
 单模态基线、Add 消融、Y5 GPT 初始化（方案 B）→ **[`cft_yolov8_config.md`](cft_yolov8_config.md)**
 
+### 7. VEDAI 跨数据集验证（可选）
+
+在 LLVIP 之外，可在 **VEDAI**（9 类车辆，1024²）上复现论文第二组实验。论文 YOLOv5s+CFT：**mAP@0.5=85.3**（Add 基线 79.7）。
+
+```bash
+bash tools/setup_vedai.sh   # 需先下载并转换 VEDAI，见 cft_yolov8_config.md §十四
+python tools/train_cft.py \
+  model=ultralytics/cfg/models/v8/yolov8s_fusion_transformerx3_vedai.yaml \
+  data=ultralytics/cfg/datasets/vedai_dual.yaml \
+  pretrained=yolov8s.pt epochs=100 imgsz=1024 batch=4 nbs=16 device=0 \
+  project=runs/vedai name=y8_cft exist_ok=True
+```
+
 ---
 
 ## Documentation

@@ -1,4 +1,4 @@
-# Dual-stream dataset YAML validation (LLVIP RGB + IR).
+# Dual-stream dataset YAML validation (LLVIP / VEDAI RGB + IR).
 
 from __future__ import annotations
 

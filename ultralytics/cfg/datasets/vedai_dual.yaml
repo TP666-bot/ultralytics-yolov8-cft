@@ -1,0 +1,21 @@
+# VEDAI dual RGB(color) + IR — template; run tools/setup_vedai.sh to rewrite paths.
+# Paper: YOLOv5s + GPT×3 @ 1024, fold01 train / fold01test val (128+128 images per modality).
+# Download: https://downloads.greyc.fr/vedai/
+
+path: ../VEDAI/Vehicules1024
+train_rgb: Images/color/fold01.txt
+val_rgb: Images/color/fold01test.txt
+train_ir: Images/ir/fold01.txt
+val_ir: Images/ir/fold01test.txt
+
+nc: 9
+names:
+  0: car
+  1: truck
+  2: pickup
+  3: tractor
+  4: camping car
+  5: boat
+  6: plane
+  7: van
+  8: other

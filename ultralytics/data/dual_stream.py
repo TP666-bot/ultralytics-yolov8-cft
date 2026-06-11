@@ -19,11 +19,38 @@ from ultralytics.utils import colorstr
 
 
 def rgb_path_to_ir(rgb_path: str) -> str:
-    """Map LLVIP visible path to paired infrared path."""
+    """Map RGB path to paired IR path (LLVIP visible/infrared or VEDAI *_co/*_ir)."""
     p = rgb_path.replace(f"{os.sep}visible{os.sep}", f"{os.sep}infrared{os.sep}")
     if p == rgb_path:
         p = rgb_path.replace("/visible/", "/infrared/").replace("\\visible\\", "\\infrared\\")
+    if p == rgb_path and "_co." in p:
+        p = p.replace("_co.", "_ir.")
+    if p == rgb_path and f"{os.sep}color{os.sep}" in p:
+        p = p.replace(f"{os.sep}color{os.sep}", f"{os.sep}ir{os.sep}")
+    if p == rgb_path and "/color/" in p:
+        p = p.replace("/color/", "/ir/")
     return p
+
+
+def load_img_list(img_path: str | list[str]) -> list[str]:
+    """Load image paths from a directory or YOLOv5-style ``.txt`` list file."""
+    import glob
+    from pathlib import Path
+
+    from ultralytics.data.utils import IMG_FORMATS
+
+    f = []
+    for p in img_path if isinstance(img_path, list) else [img_path]:
+        p = Path(p)
+        if p.is_dir():
+            f += glob.glob(str(p / "**" / "*.*"), recursive=True)
+        elif p.is_file():
+            with open(p, encoding="utf-8") as t:
+                parent = str(p.parent) + os.sep
+                f += [x.replace("./", parent) if x.startswith("./") else x for x in t.read().splitlines()]
+        else:
+            raise FileNotFoundError(f"Dual dataset path not found: {p}")
+    return sorted(x.replace("/", os.sep) for x in f if x.rpartition(".")[-1].lower() in IMG_FORMATS)
 
 
 class DualFormat(Format):
@@ -38,11 +65,25 @@ class DualFormat(Format):
 
 
 class YOLODualStreamDataset(YOLODataset):
-    """YOLO detect dataset with paired RGB + IR images."""
+    """YOLO detect dataset with paired RGB + IR images.
 
-    def __init__(self, *args, **kwargs):
+    Pairing modes (aligned with DocF/multispectral-object-detection):
+    - ``ir_path`` set (VEDAI): separate RGB/IR list files, paired by sorted index.
+    - ``ir_path`` unset (LLVIP): derive IR path from RGB via ``rgb_path_to_ir``.
+    """
+
+    def __init__(self, *args, ir_path: str | None = None, **kwargs):
+        self.ir_path = ir_path
         super().__init__(*args, **kwargs)
-        self.im_files_ir = [rgb_path_to_ir(f) for f in self.im_files]
+        if ir_path:
+            self.im_files_ir = load_img_list(ir_path)
+            if len(self.im_files_ir) != len(self.im_files):
+                raise ValueError(
+                    f"{self.prefix}RGB/IR count mismatch: {len(self.im_files)} vs {len(self.im_files_ir)} "
+                    f"(check fold list order in train_rgb/train_ir)"
+                )
+        else:
+            self.im_files_ir = [rgb_path_to_ir(f) for f in self.im_files]
 
     def load_image(self, i: int, rect_mode: bool = True):
         im_rgb, hw0, hw = super().load_image(i, rect_mode=rect_mode)
@@ -110,11 +151,19 @@ class YOLODualStreamDataset(YOLODataset):
 
 
 def build_dual_yolo_dataset(
-    cfg, img_path: str, batch: int, data: dict, mode: str = "train", rect: bool = False, stride: int = 32
+    cfg,
+    img_path: str,
+    batch: int,
+    data: dict,
+    mode: str = "train",
+    rect: bool = False,
+    stride: int = 32,
+    ir_path: str | None = None,
 ):
     """Build paired RGB/IR YOLO dataset."""
     return YOLODualStreamDataset(
         img_path=img_path,
+        ir_path=ir_path,
         imgsz=cfg.imgsz,
         batch_size=batch,
         augment=mode == "train",

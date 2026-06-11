@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from copy import copy
+from pathlib import Path
 from typing import Any
 
 import torch
@@ -92,8 +93,13 @@ class CFTDetectionTrainer(DetectionTrainer):
 
     def build_dataset(self, img_path: str, mode: str = "train", batch: int | None = None):
         gs = max(int(unwrap_model(self.model).stride.max()), 32)
+        ir_key = "train_ir" if mode == "train" else "val_ir"
+        ir_path = self.data.get(ir_key)
+        # LLVIP: IR derived from RGB paths; VEDAI: separate fold list files.
+        if ir_path and Path(str(ir_path)).resolve() == Path(str(img_path)).resolve():
+            ir_path = None
         return build_dual_yolo_dataset(
-            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs
+            self.args, img_path, batch, self.data, mode=mode, rect=mode == "val", stride=gs, ir_path=ir_path
         )
 
     def get_dataloader(self, dataset_path: str, batch_size: int = 16, rank: int = 0, mode: str = "train"):

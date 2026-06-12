@@ -612,15 +612,25 @@ python3 test.py \
 
 ### 14.3 准备步骤
 
-1. 下载 VEDAI 并转换为 **YOLO 格式**（见 [YOLOv5 Custom Data](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data) 与原仓库 README）。
-2. 确保 `color/`、`ir/` 下各有 `fold01.txt` / `fold01test.txt`（可与原工程 list 一致）。
-3. 配置路径并生成 yaml：
+1. 从 [greyc.fr/vedai](https://downloads.greyc.fr/vedai/) 下载并解压，需包含：
+   - `Vehicules1024/`（`*_co.png`、`*_ir.png`）
+   - `fold01.txt`、`fold01test.txt`
+   - `annotation1024_cleaned.txt`
+2. 一键转换为 DocF 兼容目录 + YOLO 标签：
 
 ```bash
-# tools/machine.env 中可选：VEDAI_ROOT=/path/to/VEDAI
-bash tools/setup_vedai.sh
-python tools/check_vedai_pairs.py --data ultralytics/cfg/datasets/vedai_dual.yaml
+python tools/prepare_vedai.py --src /path/to/vedai_raw_download
+# 默认输出到 <WORKSPACE>/VEDAI/Vehicules1024/
 ```
+
+3. 生成 yaml 并检查配对：
+
+```bash
+bash tools/setup_vedai.sh
+python tools/check_vedai_pairs.py
+```
+
+> 若 `check_vedai_pairs.py` 报 `Missing: ...fold01.txt`，说明 **尚未下载或未运行 prepare**；模板 `vedai_dual.yaml` 中的相对路径在数据就绪前不可用。
 
 ### 14.4 训练与评估命令
 

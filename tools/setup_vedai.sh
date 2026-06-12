@@ -49,8 +49,13 @@ Required list files:
   Images/color/fold01.txt, fold01test.txt
   Images/ir/fold01.txt, fold01test.txt
 
-See cft_yolov8_config.md section 十四 (VEDAI) for preparation steps.
-Then set VEDAI_ROOT in tools/machine.env and re-run: bash tools/setup_vedai.sh
+Preparation (if not done yet):
+  1. Download https://downloads.greyc.fr/vedai/
+  2. python tools/prepare_vedai.py --src /path/to/vedai_raw_download
+  3. Re-run: bash tools/setup_vedai.sh
+
+Or set VEDAI_ROOT in tools/machine.env to an existing prepared tree.
+See cft_yolov8_config.md §十四.
 EOF
   exit 1
 fi

@@ -2,6 +2,7 @@
 # Paper: YOLOv5s + GPT×3 @ 1024, fold01 train / fold01test val (128+128 images per modality).
 # Download: https://downloads.greyc.fr/vedai/
 
+# Run tools/setup_vedai.sh to rewrite path (absolute). Template assumes repo cwd:
 path: ../VEDAI/Vehicules1024
 train_rgb: Images/color/fold01.txt
 val_rgb: Images/color/fold01test.txt

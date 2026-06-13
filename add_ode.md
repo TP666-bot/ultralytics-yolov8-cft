@@ -67,6 +67,30 @@ x_{i+1} = x_i + h/2 * (k1 + k2)
 
 ---
 
+## 0. 当前实现状态
+
+已在 `feature/ode-robust-block` 分支完成第一版 `ODE-P4` 实现：
+
+| 内容 | 状态 |
+|------|------|
+| `ultralytics/nn/modules/ode.py` | 已新增 `ODERobustBlock` |
+| `ultralytics/nn/modules/__init__.py` | 已注册模块导出 |
+| `ultralytics/nn/tasks.py` | 已加入 YAML 解析注册 |
+| `ultralytics/models/yolo/detect/cft_train.py` | 已修复双流训练 final eval 使用标准单路数据检查的问题 |
+| `ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_ode_p4_llvip.yaml` | 已新增 P4 ODE 配置 |
+| 默认 ODE 参数 | `steps=2, step_size=0.5, solver=euler, expansion=0.5, gamma=1.0` |
+
+第一版只插入 P4 融合特征，暂不替换 Backbone `C2f`，也不加入 P5/P345，便于定位收益和风险。
+
+验证记录：
+
+- `python3 -m compileall ultralytics/nn/modules/ode.py ultralytics/nn/tasks.py`：通过。
+- `DualDetectionModel(...ode_p4...).forward(x, x2)` CPU 小输入：通过。
+- GPU 1 epoch 冒烟未执行完成：当前 GPU 上已有 `y8_cft_y5gpt` 训练进程占用约 4.8 GB，EMA 创建阶段显存不足。
+- 使用 `/tmp/llvip_mini_ode.yaml` 的 CPU mini 训练完成 1 epoch，并通过 final eval；该测试仅验证训练链路，不代表性能。
+
+---
+
 ## 2. 实验思路
 
 不要一开始替换大量 Backbone `C2f`。推荐先在 CFT 融合后的 P3/P4/P5 特征上加 ODE Robust Block。

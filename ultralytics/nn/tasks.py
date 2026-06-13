@@ -22,6 +22,7 @@ from ultralytics.nn.modules import (
     ELAN1,
     OBB,
     OBB26,
+    ODERobustBlock,
     PSA,
     SPP,
     SPPELAN,
@@ -1610,6 +1611,7 @@ def parse_model(d, ch, verbose=True):
             SCDown,
             C2fCIB,
             A2C2f,
+            ODERobustBlock,
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments

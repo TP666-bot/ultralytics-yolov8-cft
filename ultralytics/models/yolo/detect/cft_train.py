@@ -14,8 +14,8 @@ from ultralytics.data.dual_utils import check_dual_det_dataset
 from ultralytics.models.yolo.detect import DetectionTrainer
 from ultralytics.models.yolo.detect.val import DetectionValidator
 from ultralytics.nn.tasks_dual import DualDetectionModel
-from ultralytics.utils import LOGGER, RANK
-from ultralytics.utils.torch_utils import torch_distributed_zero_first, unwrap_model
+from ultralytics.utils import LOCAL_RANK, LOGGER, RANK
+from ultralytics.utils.torch_utils import strip_optimizer, torch_distributed_zero_first, unwrap_model
 
 
 def _on_train_epoch_start(trainer) -> None:
@@ -82,6 +82,22 @@ class CFTDetectionTrainer(DetectionTrainer):
         if self.validator is None:
             self.setup_val()
         return super().validate()
+
+    def final_eval(self):
+        """Run final validation with the dual-stream dataloader and dataset parser."""
+        model = self.best if self.best.exists() else None
+        with torch_distributed_zero_first(LOCAL_RANK):
+            if RANK in {-1, 0}:
+                ckpt = strip_optimizer(self.last) if self.last.exists() else {}
+                if model:
+                    strip_optimizer(self.best, updates={"train_results": ckpt.get("train_results")})
+        if model:
+            LOGGER.info(f"\nValidating {model}...")
+            self.validator.args.plots = self.args.plots
+            self.validator.args.compile = False
+            self.metrics = self.validator(trainer=self)
+            self.metrics.pop("fitness", None)
+            self.run_callbacks("on_fit_epoch_end")
 
     def get_dataset(self):
         data = check_dual_det_dataset(self.args.data)

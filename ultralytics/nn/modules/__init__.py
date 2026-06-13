@@ -94,6 +94,7 @@ from .head import (
     YOLOESegment26,
     v10Detect,
 )
+from .ode import ODERobustBlock
 from .transformer import (
     AIFI,
     MLP,
@@ -124,6 +125,7 @@ __all__ = (
     "MLP",
     "OBB",
     "OBB26",
+    "ODERobustBlock",
     "PSA",
     "SPP",
     "SPPELAN",

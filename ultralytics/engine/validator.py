@@ -150,7 +150,7 @@ class BaseValidator:
             # Force FP16 val during training   hlc replaces the follow two lines
             # self.args.half = self.device.type != "cpu" and trainer.amp
             # model = trainer.ema.ema or trainer.model
-            self.args.half = self.device.type != "cpu" and getattr(trainer, 'amp', False)
+            self.args.half = self.device.type != "cpu" and getattr(trainer, "amp", False)
             model = (trainer.ema.ema if trainer.ema is not None else None) or trainer.model
             if trainer.args.compile and hasattr(model, "_orig_mod"):
                 model = model._orig_mod  # validate non-compiled original model to avoid issues
@@ -158,8 +158,14 @@ class BaseValidator:
             # hlc replaces the follow two lines
             # self.loss = torch.zeros_like(trainer.loss_items, device=trainer.device)
             # self.args.plots &= trainer.stopper.possible_stop or (trainer.epoch == trainer.epochs - 1)
-            self.loss = torch.zeros_like(trainer.loss_items, device=trainer.device) if hasattr(trainer, 'loss_items') and trainer.loss_items is not None else torch.zeros(3, device=trainer.device)
-            self.args.plots &= getattr(getattr(trainer, 'stopper', None), 'possible_stop', False) or (getattr(trainer, 'epoch', 0) == getattr(trainer, 'epochs', 1) - 1)
+            self.loss = (
+                torch.zeros_like(trainer.loss_items, device=trainer.device)
+                if hasattr(trainer, "loss_items") and trainer.loss_items is not None
+                else torch.zeros(3, device=trainer.device)
+            )
+            self.args.plots &= getattr(getattr(trainer, "stopper", None), "possible_stop", False) or (
+                getattr(trainer, "epoch", 0) == getattr(trainer, "epochs", 1) - 1
+            )
             model.eval()
         else:
             if str(self.args.model).endswith(".yaml") and model is None:

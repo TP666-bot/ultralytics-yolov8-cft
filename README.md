@@ -24,11 +24,11 @@ CFT 通过 Transformer 自注意力在 P3/P4/P5 多尺度特征上同时建模 *
 
 **主要成果（LLVIP test，3463 图，`val_cft.py`，conf=0.001，iou=0.5，imgsz=1024）**：
 
-| 方法 | 框架 | mAP@0.5 | mAP@0.5:0.95 |
-|------|------|---------|--------------|
-| CFT（论文） | YOLOv5 | 0.975 | 0.636 |
-| CFT（作者权重复现） | YOLOv5 | 0.972 | 0.633 |
-| **CFT（本仓库 y8_cft_v2）** | **YOLOv8** | **0.973** | **0.668** |
+| 方法                        | 框架       | mAP@0.5   | mAP@0.5:0.95 |
+| --------------------------- | ---------- | --------- | ------------ |
+| CFT（论文）                 | YOLOv5     | 0.975     | 0.636        |
+| CFT（作者权重复现）         | YOLOv5     | 0.972     | 0.633        |
+| **CFT（本仓库 y8_cft_v2）** | **YOLOv8** | **0.973** | **0.668**    |
 
 > **说明**：本仓库为研究与复现实验分支（`cft-yolov8-llvip`），不修改 [DocF/multispectral-object-detection](https://github.com/DocF/multispectral-object-detection) 原仓库；后者仍作为 YOLOv5+CFT 参考实现与对照实验来源。实现细节与 P1–P5 改进见 [`tp_improve.md`](tp_improve.md)。
 
@@ -57,16 +57,16 @@ CFT 原论文方法示意图见官方仓库：[cft.png](https://github.com/DocF/
 
 ## Highlights
 
-| 模块 | 路径 | 说明 |
-|------|------|------|
-| CFT 融合层 | `ultralytics/nn/modules/cft.py` | `GPT`、`Add`、`Add2` |
-| 双路模型 | `ultralytics/nn/tasks_dual.py` | RGB/IR 双流 `forward_once` |
-| 双路数据与增强 | `ultralytics/data/dual_stream.py`、`dual_augment.py` | 成对 RGB+IR、同步 Mosaic/Affine |
-| CFT 训练/验证 | `ultralytics/models/yolo/detect/cft_train.py` | 冻结 backbone、`val_cft` 双路推理 |
-| 训练/评估入口 | `tools/train_cft.py`、`tools/val_cft.py` | SGD 默认、论文协议评估 |
-| Y5→Y8 GPT 初始化 | `tools/load_cft_partial.py` | 可选方案 B |
-| 融合配置 | `ultralytics/cfg/models/v8/yolov8l_fusion_*.yaml` | Add / GPT×3 |
-| 实验文档 | [`cft_yolov8_config.md`](cft_yolov8_config.md) | 环境、命令、消融表、故障排查 |
+| 模块             | 路径                                                 | 说明                              |
+| ---------------- | ---------------------------------------------------- | --------------------------------- |
+| CFT 融合层       | `ultralytics/nn/modules/cft.py`                      | `GPT`、`Add`、`Add2`              |
+| 双路模型         | `ultralytics/nn/tasks_dual.py`                       | RGB/IR 双流 `forward_once`        |
+| 双路数据与增强   | `ultralytics/data/dual_stream.py`、`dual_augment.py` | 成对 RGB+IR、同步 Mosaic/Affine   |
+| CFT 训练/验证    | `ultralytics/models/yolo/detect/cft_train.py`        | 冻结 backbone、`val_cft` 双路推理 |
+| 训练/评估入口    | `tools/train_cft.py`、`tools/val_cft.py`             | SGD 默认、论文协议评估            |
+| Y5→Y8 GPT 初始化 | `tools/load_cft_partial.py`                          | 可选方案 B                        |
+| 融合配置         | `ultralytics/cfg/models/v8/yolov8l_fusion_*.yaml`    | Add / GPT×3                       |
+| 实验文档         | [`cft_yolov8_config.md`](cft_yolov8_config.md)       | 环境、命令、消融表、故障排查      |
 
 ---
 
@@ -74,24 +74,24 @@ CFT 原论文方法示意图见官方仓库：[cft.png](https://github.com/DocF/
 
 与论文消融逻辑对齐的四组 **YOLOv8** 实验（完整表见 [`cft_yolov8_config.md` §9](cft_yolov8_config.md#九实验记录表)）：
 
-| ID | 实验 | 模态 / 融合 | mAP@0.5 | 状态 |
-|----|------|-------------|---------|------|
-| 1 | **Y8-RGB** | 单路可见光 | — | 待填 |
-| 2 | **Y8-IR** | 单路红外 | ~0.958 | 训练 val |
-| 3 | **Y8-Add** | 双路 + 逐层 Add | — | P1 增强后待重训 |
-| 4 | **Y8-CFT** | 双路 + GPT×3 | **0.973** | ✅ 论文量级（`y8_cft_v2`） |
+| ID  | 实验       | 模态 / 融合     | mAP@0.5   | 状态                       |
+| --- | ---------- | --------------- | --------- | -------------------------- |
+| 1   | **Y8-RGB** | 单路可见光      | —         | 待填                       |
+| 2   | **Y8-IR**  | 单路红外        | ~0.958    | 训练 val                   |
+| 3   | **Y8-Add** | 双路 + 逐层 Add | —         | P1 增强后待重训            |
+| 4   | **Y8-CFT** | 双路 + GPT×3    | **0.973** | ✅ 论文量级（`y8_cft_v2`） |
 
 **Y8-CFT v2 正式指标**（`best.pt`，epoch ~51 峰值）：
 
-| P | R | mAP@0.5 | mAP@0.5:0.95 |
-|---|---|---------|--------------|
-| 0.967 | 0.936 | **0.973** | **0.668** |
+| P     | R     | mAP@0.5   | mAP@0.5:0.95 |
+| ----- | ----- | --------- | ------------ |
+| 0.967 | 0.936 | **0.973** | **0.668**    |
 
 **YOLOv5+CFT 参考**（原仓库作者权重，`test.py` 独立复现）：
 
 | mAP@0.5 | mAP@0.5:0.95 |
-|---------|--------------|
-| 0.972 | 0.633 |
+| ------- | ------------ |
+| 0.972   | 0.633        |
 
 ---
 
@@ -119,7 +119,7 @@ cd ultralytics-yolov8-cft
 ### 3. 一键配置路径
 
 ```bash
-cp tools/machine.env.example tools/machine.env   # 编辑 WORKSPACE
+cp tools/machine.env.example tools/machine.env # 编辑 WORKSPACE
 bash tools/setup_new_machine.sh
 ```
 
@@ -128,7 +128,7 @@ bash tools/setup_new_machine.sh
 ```bash
 conda create -n y8-cft python=3.10 -y
 conda activate y8-cft
-pip install torch torchvision   # 按 https://pytorch.org 选择 CUDA 版本
+pip install torch torchvision # 按 https://pytorch.org 选择 CUDA 版本
 pip install -e .
 ```
 
@@ -169,7 +169,7 @@ python tools/val_cft.py \
 在 LLVIP 之外，可在 **VEDAI**（9 类车辆，1024²）上复现论文第二组实验。论文 YOLOv5s+CFT：**mAP@0.5=85.3**（Add 基线 79.7）。
 
 ```bash
-bash tools/setup_vedai.sh   # 需先下载并转换 VEDAI，见 cft_yolov8_config.md §十四
+bash tools/setup_vedai.sh # 需先下载并转换 VEDAI，见 cft_yolov8_config.md §十四
 python tools/train_cft.py \
   model=ultralytics/cfg/models/v8/yolov8s_fusion_transformerx3_vedai.yaml \
   data=ultralytics/cfg/datasets/vedai_dual.yaml \
@@ -181,12 +181,12 @@ python tools/train_cft.py \
 
 ## Documentation
 
-| 文档 | 内容 |
-|------|------|
-| [`cft_yolov8_config.md`](cft_yolov8_config.md) | 实验协议、消融设计、结果表、复现命令、故障排查 |
-| [`tp_improve.md`](tp_improve.md) | P1–P5 代码级改进说明（双路增强、SGD、freeze、val 修复） |
-| [`tools/setup_new_machine.sh`](tools/setup_new_machine.sh) | 新机器路径与 symlink 自动生成 |
-| [Ultralytics Docs](https://docs.ultralytics.com/) | 上游 YOLOv8 通用 API |
+| 文档                                                       | 内容                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------- |
+| [`cft_yolov8_config.md`](cft_yolov8_config.md)             | 实验协议、消融设计、结果表、复现命令、故障排查          |
+| [`tp_improve.md`](tp_improve.md)                           | P1–P5 代码级改进说明（双路增强、SGD、freeze、val 修复） |
+| [`tools/setup_new_machine.sh`](tools/setup_new_machine.sh) | 新机器路径与 symlink 自动生成                           |
+| [Ultralytics Docs](https://docs.ultralytics.com/)          | 上游 YOLOv8 通用 API                                    |
 
 ---
 
@@ -216,11 +216,11 @@ python tools/train_cft.py \
 
 ---
 
-## Acknowledgements
+## Acknowledgments
 
-- [Cross-Modality Fusion Transformer (CFT)](https://github.com/DocF/multispectral-object-detection) — YOLOv5 双路融合原实现  
-- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) — 检测框架基座  
-- [LLVIP Dataset](https://github.com/bupt-ai-cz/LLVIP) — 可见光–红外配对数据  
+- [Cross-Modality Fusion Transformer (CFT)](https://github.com/DocF/multispectral-object-detection) — YOLOv5 双路融合原实现
+- [Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics) — 检测框架基座
+- [LLVIP Dataset](https://github.com/bupt-ai-cz/LLVIP) — 可见光–红外配对数据
 
 ---
 

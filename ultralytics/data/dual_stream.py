@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import cv2
-import numpy as np
 import torch
 
 from ultralytics.data.augment import Compose, Format
@@ -35,7 +34,6 @@ def rgb_path_to_ir(rgb_path: str) -> str:
 def load_img_list(img_path: str | list[str]) -> list[str]:
     """Load image paths from a directory or YOLOv5-style ``.txt`` list file."""
     import glob
-    from pathlib import Path
 
     from ultralytics.data.utils import IMG_FORMATS
 

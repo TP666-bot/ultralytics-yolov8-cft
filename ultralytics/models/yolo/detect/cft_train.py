@@ -72,7 +72,7 @@ class CFTDetectionTrainer(DetectionTrainer):
         self.setup_model()
         self.model = self.model.to(self.device)
         self.set_model_attributes()
-        gs = max(int(unwrap_model(self.model).stride.max()), 32)
+        max(int(unwrap_model(self.model).stride.max()), 32)
         self.args.imgsz = int(self.args.imgsz)
         self.test_loader = self.get_dataloader(self.data["val"], batch_size=self.batch_size, rank=-1, mode="val")
         self.validator = self.get_validator()
@@ -133,8 +133,8 @@ class CFTDetectionTrainer(DetectionTrainer):
 class CFTDetectionValidator(DetectionValidator):
     """Validate dual-stream models (RGB + IR).
 
-    Standalone ``tools/val_cft.py`` must call with ``trainer=`` (not ``model=`` alone) so
-    ``llvip_dual.yaml`` is read via ``check_dual_det_dataset`` and the dual dataloader is reused.
+    Standalone ``tools/val_cft.py`` must call with ``trainer=`` (not ``model=`` alone) so ``llvip_dual.yaml`` is read
+    via ``check_dual_det_dataset`` and the dual dataloader is reused.
     """
 
     def __call__(self, trainer=None, model=None):

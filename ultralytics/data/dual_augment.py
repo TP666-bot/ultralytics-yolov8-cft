@@ -13,9 +13,7 @@ from ultralytics.data.augment import (
     Albumentations,
     Compose,
     CopyPaste,
-    CutMix,
     LetterBox,
-    MixUp,
     Mosaic,
     RandomFlip,
     RandomHSV,
@@ -218,7 +216,7 @@ def dual_v8_transforms(dataset, imgsz: int, hyp, stretch: bool = False):
 
     flip_idx = dataset.data.get("flip_idx", [])
     if dataset.use_keypoints:
-        kpt_shape = dataset.data.get("kpt_shape", None)
+        dataset.data.get("kpt_shape", None)
         if len(flip_idx) == 0 and (hyp.fliplr > 0.0 or hyp.flipud > 0.0):
             hyp.fliplr = hyp.flipud = 0.0
 

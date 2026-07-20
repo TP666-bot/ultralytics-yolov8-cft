@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Train YOLOv8 + CFT (dual RGB/IR) on LLVIP.
+r"""Train YOLOv8 + CFT (dual RGB/IR) on LLVIP.
 
 8GB GPU (e.g. RTX 4060 Ti) — YOLOv8l + CFT @ 1024:
   python tools/train_cft.py \\

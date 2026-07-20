@@ -109,7 +109,7 @@ class DualDetectionModel(DetectionModel):
         if isinstance(weights, str):
             weights, _ = torch_safe_load(weights)
         csd = weights["model"].float().state_dict() if isinstance(weights, dict) else weights.float().state_dict()
-        updated = self.load_state_dict(
+        self.load_state_dict(
             {k: v for k, v in csd.items() if k in self.state_dict() and self.state_dict()[k].shape == v.shape},
             strict=False,
         )

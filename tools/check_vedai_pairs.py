@@ -36,7 +36,7 @@ def main():
         ir = load_img_list(data[ir_k])
         print(f"{split}: rgb={len(rgb)} ir={len(ir)}")
         if len(rgb) != len(ir):
-            print(f"  FAIL length mismatch")
+            print("  FAIL length mismatch")
             continue
         bad = [(r, i) for r, i in zip(rgb, ir) if scene_id(r) != scene_id(i)]
         if bad:
@@ -44,7 +44,7 @@ def main():
             for r, i in bad[:3]:
                 print(f"    {Path(r).name} vs {Path(i).name}")
         else:
-            print(f"  OK paired by sorted index")
+            print("  OK paired by sorted index")
 
 
 if __name__ == "__main__":

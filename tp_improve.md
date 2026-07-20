@@ -8,13 +8,13 @@
 
 来源文件：`results (1).csv`（双路 CFT / `train_cft.py`，共 **42 epoch** 记录）。
 
-| 阶段 | epoch | mAP@0.5 (val) | mAP@0.5:0.95 | 备注 |
-|------|-------|---------------|--------------|------|
-| 起步 | 1 | 0.738 | 0.308 | 预训练 backbone 起点 |
-| 快速提升 | 5 | 0.881 | 0.527 | |
-| **峰值附近** | **12** | **0.923** | **0.594** | 本轮日志最高点 |
-| 平台期 | 20–30 | ~0.919–0.920 | ~0.587–0.590 | 增幅放缓 |
-| 末段 | 42 | 0.902 | 0.567 | 略有回落，可能未收敛 |
+| 阶段         | epoch  | mAP@0.5 (val) | mAP@0.5:0.95 | 备注                 |
+| ------------ | ------ | ------------- | ------------ | -------------------- |
+| 起步         | 1      | 0.738         | 0.308        | 预训练 backbone 起点 |
+| 快速提升     | 5      | 0.881         | 0.527        |                      |
+| **峰值附近** | **12** | **0.923**     | **0.594**    | 本轮日志最高点       |
+| 平台期       | 20–30  | ~0.919–0.920  | ~0.587–0.590 | 增幅放缓             |
+| 末段         | 42     | 0.902         | 0.567        | 略有回落，可能未收敛 |
 
 **结论（客观）：**
 
@@ -27,14 +27,14 @@
 
 ## 2. 与论文 / 本机实验对照
 
-| 设置 | mAP@0.5 | 说明 |
-|------|---------|------|
-| 论文 LLVIP CFT（YOLOv5l） | **0.975** | 作者权重 + 原 `test.py` |
-| 论文 LLVIP Add | 0.958 | 无 GPT |
-| 独立复现 Y5-CFT | 0.972 | 同协议 |
-| 另一台机器 Y8-CFT（42e, val iou=0.7） | **~0.923（峰值）** | `results (1).csv` |
-| 本机 Y8-IR 单模态（100e） | 0.958 | `yolo train`，完整 v8 增强 |
-| 本机 Y8-Add（100e，旧管线） | ~0.69 | 双路几乎无 mosaic |
+| 设置                                  | mAP@0.5            | 说明                       |
+| ------------------------------------- | ------------------ | -------------------------- |
+| 论文 LLVIP CFT（YOLOv5l）             | **0.975**          | 作者权重 + 原 `test.py`    |
+| 论文 LLVIP Add                        | 0.958              | 无 GPT                     |
+| 独立复现 Y5-CFT                       | 0.972              | 同协议                     |
+| 另一台机器 Y8-CFT（42e, val iou=0.7） | **~0.923（峰值）** | `results (1).csv`          |
+| 本机 Y8-IR 单模态（100e）             | 0.958              | `yolo train`，完整 v8 增强 |
+| 本机 Y8-Add（100e，旧管线）           | ~0.69              | 双路几乎无 mosaic          |
 
 ---
 
@@ -49,11 +49,11 @@ YOLOv5 多光谱代码对 RGB/IR 使用 **`load_mosaic_RGB_IR` + 同步几何变
 
 ### 3.2 训练轮数与名义 batch（P2）
 
-| 项 | 另一台机器日志 | 论文 / 作者权重 |
-|----|----------------|-----------------|
-| epochs | 42（未完成） | **200** |
-| nbs | 未在 csv 体现，常为 16 | 文件名 **bs32** |
-| 增强版默认 | — | `train_cft.py` 默认 **epochs=200, nbs=32** |
+| 项         | 另一台机器日志         | 论文 / 作者权重                            |
+| ---------- | ---------------------- | ------------------------------------------ |
+| epochs     | 42（未完成）           | **200**                                    |
+| nbs        | 未在 csv 体现，常为 16 | 文件名 **bs32**                            |
+| 增强版默认 | —                      | `train_cft.py` 默认 **epochs=200, nbs=32** |
 
 ### 3.3 GPT 初始化（P3）
 
@@ -68,9 +68,9 @@ CFT 的 GPT 模块默认 **随机初始化**；论文使用 **充分训练的 YO
 
 ### 3.5 评估协议（P5）
 
-| 用途 | conf | iou | 说明 |
-|------|------|-----|------|
-| 训练中 val | 默认 | **0.7** | `results.csv` 中数字 |
+| 用途            | conf      | iou     | 说明                                   |
+| --------------- | --------- | ------- | -------------------------------------- |
+| 训练中 val      | 默认      | **0.7** | `results.csv` 中数字                   |
 | 论文 / 公平对比 | **0.001** | **0.5** | 必须用 `val_cft.py` 或对齐的 `test.py` |
 
 ---
@@ -79,15 +79,15 @@ CFT 的 GPT 模块默认 **随机初始化**；论文使用 **充分训练的 YO
 
 ### P1 — 双路同步数据增强
 
-| 文件 | 内容 |
-|------|------|
+| 文件                               | 内容                                                                          |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
 | `ultralytics/data/dual_augment.py` | `dual_v8_transforms()`：mosaic/affine/flip/HSV 同步 RGB+IR；禁用 MixUp/CutMix |
-| `ultralytics/data/dual_stream.py` | 训练分支调用 `dual_v8_transforms` |
+| `ultralytics/data/dual_stream.py`  | 训练分支调用 `dual_v8_transforms`                                             |
 
 ### P2 — 训练默认超参
 
-| 文件 | 默认值 |
-|------|--------|
+| 文件                 | 默认值                                                        |
+| -------------------- | ------------------------------------------------------------- |
 | `tools/train_cft.py` | `epochs=200`, `nbs=32`, `batch` 仍由 CLI 指定（如 `batch=2`） |
 
 显式覆盖示例：
@@ -119,12 +119,12 @@ python tools/train_cft.py \
 
 ### P4 — 更低学习率 + 前若干 epoch 冻结 backbone
 
-| 参数 | 默认 | 含义 |
-|------|------|------|
-| `optimizer` | **`SGD`** | **禁止 `auto`**（8.4 会选 MuSGD/Muon，与 GPT 梯度形状冲突导致 `AssertionError`） |
-| `lr0` | `0.005` | 较 Ultralytics 默认 `0.01` 更保守；使用 SGD 时生效 |
-| `momentum` | `0.937` | 与 YOLOv5 一致 |
-| `freeze_epochs` | `10` | 前 10 epoch 冻结 `model.0`–`model.19`（双路 backbone） |
+| 参数            | 默认      | 含义                                                                             |
+| --------------- | --------- | -------------------------------------------------------------------------------- |
+| `optimizer`     | **`SGD`** | **禁止 `auto`**（8.4 会选 MuSGD/Muon，与 GPT 梯度形状冲突导致 `AssertionError`） |
+| `lr0`           | `0.005`   | 较 Ultralytics 默认 `0.01` 更保守；使用 SGD 时生效                               |
+| `momentum`      | `0.937`   | 与 YOLOv5 一致                                                                   |
+| `freeze_epochs` | `10`      | 前 10 epoch 冻结 `model.0`–`model.19`（双路 backbone）                           |
 
 **注意**：`freeze_epochs` 是 **`train_cft.py` 专用参数**，不是 Ultralytics 全局 cfg 字段；由脚本在内部处理，不要传给 `yolo train`。
 
@@ -134,11 +134,11 @@ python tools/train_cft.py \
 
 ```bash
 python tools/val_cft.py \
-  model=runs/detect/runs/llvip/<run>/weights/best.pt \
+  model=runs/detect/runs/llvip/ \
   data=ultralytics/cfg/datasets/llvip_dual.yaml \
   imgsz=1024 batch=4 device=0 \
   conf=0.001 iou=0.5 \
-  project=runs/llvip name=y8_cft_paper_val exist_ok=True
+  project=runs/llvip name=y8_cft_paper_val exist_ok=True < run > /weights/best.pt
 ```
 
 `CFTDetectionTrainer.setup_val()` 已修复单独验证时 `validator is None` 的问题。
@@ -238,13 +238,13 @@ python tools/train_cft.py \
 
 ## 10. 变更日志
 
-| 日期 | 内容 |
-|------|------|
-| 2025-05-27 | 初版：解读 `results (1).csv`，落地 P1–P5 |
-| 2025-05-27 | 默认 `optimizer=SGD`，规避 MuSGD 与 CFT 不兼容 |
-| 2025-05-27 | `DualLetterBox`：验证时同步 letterbox RGB/IR |
+| 日期       | 内容                                                    |
+| ---------- | ------------------------------------------------------- |
+| 2025-05-27 | 初版：解读 `results (1).csv`，落地 P1–P5                |
+| 2025-05-27 | 默认 `optimizer=SGD`，规避 MuSGD 与 CFT 不兼容          |
+| 2025-05-27 | `DualLetterBox`：验证时同步 letterbox RGB/IR            |
 | 2025-05-27 | 默认 `batch=1`；验证 batch 不再 ×2；解冻 epoch 显存提示 |
-| 2025-05-27 | 附录 §11：P1–P5 及故障修复的代码级实现说明 |
+| 2025-05-27 | 附录 §11：P1–P5 及故障修复的代码级实现说明              |
 
 ---
 
@@ -254,15 +254,15 @@ python tools/train_cft.py \
 
 ### 11.0 问题与改进总览
 
-| 现象（改进前） | 根因 | 改动编号 | 关键文件 |
-|----------------|------|----------|----------|
-| Y8-Add mAP ~0.69 | 双路训练只有 LetterBox，无 mosaic 等 | **P1** | `dual_augment.py`, `dual_stream.py` |
-| 42 epoch 就平台 ~0.92 | epoch/nbs 不足、GPT 随机初始化 | **P2, P3** | `train_cft.py`, `load_cft_partial.py` |
-| 融合层训崩 / 涨不动 | lr 过大、backbone 一开始就动 | **P4** | `train_cft.py`, `cft_train.py` |
-| 和论文数字不可比 | val 用 iou=0.7，无双路验证 | **P5** | `val_cft.py`, `cft_train.py` |
-| epoch 1 验证崩溃 64 vs 80 | val 只 letterbox RGB | **修复 A** | `DualLetterBox` |
-| `assert len(G.shape)==2` | `optimizer=auto` → MuSGD | **修复 B** | `train_cft.py` |
-| epoch 11 OOM | backbone 解冻 + batch=2 | **修复 C** | `freeze_epochs` + `batch=1` 续训 |
+| 现象（改进前）            | 根因                                 | 改动编号   | 关键文件                              |
+| ------------------------- | ------------------------------------ | ---------- | ------------------------------------- |
+| Y8-Add mAP ~0.69          | 双路训练只有 LetterBox，无 mosaic 等 | **P1**     | `dual_augment.py`, `dual_stream.py`   |
+| 42 epoch 就平台 ~0.92     | epoch/nbs 不足、GPT 随机初始化       | **P2, P3** | `train_cft.py`, `load_cft_partial.py` |
+| 融合层训崩 / 涨不动       | lr 过大、backbone 一开始就动         | **P4**     | `train_cft.py`, `cft_train.py`        |
+| 和论文数字不可比          | val 用 iou=0.7，无双路验证           | **P5**     | `val_cft.py`, `cft_train.py`          |
+| epoch 1 验证崩溃 64 vs 80 | val 只 letterbox RGB                 | **修复 A** | `DualLetterBox`                       |
+| `assert len(G.shape)==2`  | `optimizer=auto` → MuSGD             | **修复 B** | `train_cft.py`                        |
+| epoch 11 OOM              | backbone 解冻 + batch=2              | **修复 C** | `freeze_epochs` + `batch=1` 续训      |
 
 以下按**数据流顺序**：数据 → 模型前向 → 训练器 → 评估 → 工具脚本。
 
@@ -286,9 +286,9 @@ python tools/train_cft.py \
 # tasks_dual.py 核心循环
 for m in self.model:
     if m.f == -4:
-        x = m(x2)          # IR 路：层 5–9、15–19 等，输入来自 batch["img2"]
+        x = m(x2)  # IR 路：层 5–9、15–19 等，输入来自 batch["img2"]
     else:
-        x = m(x)           # RGB 路或融合后的单 tensor
+        x = m(x)  # RGB 路或融合后的单 tensor
 ```
 
 训练时 `forward(dict)` 走 `loss(batch)`，内部 `preds = self._predict_once(batch["img"], batch["img2"])`。
@@ -324,13 +324,13 @@ elif m is GPT:
 
 #### 步骤 1：新增 `ultralytics/data/dual_augment.py`
 
-| 类 | 继承 | 做法 |
-|----|------|------|
-| `DualMosaic` | `Mosaic` | 重写 `_mosaic4`：拼 4 宫格时对 `img` 与 `img2` 用**相同** `(xc,yc)` 裁切与粘贴 |
-| `DualRandomPerspective` | `RandomPerspective` | 对 RGB 算仿射矩阵 `M`，`_warp_img2()` 用**同一 M** warp IR |
-| `DualRandomFlip` | `RandomFlip` | 同一 `random.random()` 决定 fliplr/flipud，两路同步 |
-| `DualRandomHSV` | `RandomHSV` | RGB 做 HSV 后，对 IR 再走一遍（与 Y5 多光谱一致） |
-| `DualLetterBox` | `LetterBox` | **验证专用**：先 letterbox RGB，再对 `img2` 走 image-only 同参数 letterbox |
+| 类                      | 继承                | 做法                                                                           |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------ |
+| `DualMosaic`            | `Mosaic`            | 重写 `_mosaic4`：拼 4 宫格时对 `img` 与 `img2` 用**相同** `(xc,yc)` 裁切与粘贴 |
+| `DualRandomPerspective` | `RandomPerspective` | 对 RGB 算仿射矩阵 `M`，`_warp_img2()` 用**同一 M** warp IR                     |
+| `DualRandomFlip`        | `RandomFlip`        | 同一 `random.random()` 决定 fliplr/flipud，两路同步                            |
+| `DualRandomHSV`         | `RandomHSV`         | RGB 做 HSV 后，对 IR 再走一遍（与 Y5 多光谱一致）                              |
+| `DualLetterBox`         | `LetterBox`         | **验证专用**：先 letterbox RGB，再对 `img2` 走 image-only 同参数 letterbox     |
 
 `dual_v8_transforms()` 组装管线，并**显式关闭**双路不支持的增强：
 
@@ -350,9 +350,9 @@ MixUp/CutMix 会打乱 RGB/IR 配对关系，必须关。
 if self.augment:
     hyp.mixup = 0.0
     hyp.cutmix = 0.0
-    transforms = dual_v8_transforms(self, self.imgsz, hyp)   # 训练
+    transforms = dual_v8_transforms(self, self.imgsz, hyp)  # 训练
 else:
-    transforms = Compose([DualLetterBox(...)])               # 验证
+    transforms = Compose([DualLetterBox(...)])  # 验证
 transforms.append(DualFormat(...))  # 输出 tensor：img + img2
 ```
 
@@ -361,7 +361,7 @@ transforms.append(DualFormat(...))  # 输出 tensor：img + img2
 #### 步骤 3：训练器喂双路张量 `cft_train.py` → `preprocess_batch()`
 
 ```python
-batch = super().preprocess_batch(batch)   # img → device, /255
+batch = super().preprocess_batch(batch)  # img → device, /255
 batch["img2"] = batch["img2"].to(self.device).float() / 255
 ```
 
@@ -391,7 +391,7 @@ batch["img2"] = batch["img2"].to(self.device).float() / 255
 class DualLetterBox(LetterBox):
     def __call__(self, labels=None, image=None):
         img2 = labels.pop("img2", None)
-        out = super().__call__(labels, image)      # letterbox RGB + 更新 bbox
+        out = super().__call__(labels, image)  # letterbox RGB + 更新 bbox
         if img2 is not None:
             out["img2"] = super().__call__(labels={}, image=img2)  # 同 new_shape，不碰 instances
         return out
@@ -408,8 +408,8 @@ class DualLetterBox(LetterBox):
 ```python
 # train_cft.py — main() 内 setdefault
 overrides.setdefault("epochs", 200)
-overrides.setdefault("batch", 1)      # 物理 batch；8GB + Y8l-CFT @1024 必须 1
-overrides.setdefault("nbs", 16)       # 有效 batch = nbs / batch；可 CLI 改为 nbs=32
+overrides.setdefault("batch", 1)  # 物理 batch；8GB + Y8l-CFT @1024 必须 1
+overrides.setdefault("nbs", 16)  # 有效 batch = nbs / batch；可 CLI 改为 nbs=32
 overrides.setdefault("workers", 2)
 ```
 
@@ -473,16 +473,16 @@ trainer = CFTDetectionTrainer(..., freeze_epochs=freeze_epochs)
 每个 epoch 开始遍历 `named_parameters()`，**层索引 ≤19** 为双路 backbone：
 
 ```python
-freeze = trainer.epoch < n   # epoch 0..9 冻结；epoch 10+ 解冻
+freeze = trainer.epoch < n  # epoch 0..9 冻结；epoch 10+ 解冻
 if idx <= 19:
     param.requires_grad = not freeze
 ```
 
 层号对应关系（`yolov8l_fusion_transformerx3_llvip.yaml`）：
 
-- `0–9`：RGB backbone  
-- `5–9` 在 IR 路为 `10–19`（`f=-4` 入口）  
-- `10,17,26`：GPT；`29–44`：neck + Detect  
+- `0–9`：RGB backbone
+- `5–9` 在 IR 路为 `10–19`（`f=-4` 入口）
+- `10,17,26`：GPT；`29–44`：neck + Detect
 
 冻结阶段只训 **GPT + Add + 检测头**，避免随机 GPT 梯度破坏预训练 backbone。
 
@@ -506,7 +506,7 @@ resume=.../last.pt batch=1 freeze_epochs=0
 
 ```python
 overrides.setdefault("conf", 0.001)
-overrides.setdefault("iou", 0.5)    # 对齐 YOLOv5 test.py
+overrides.setdefault("iou", 0.5)  # 对齐 YOLOv5 test.py
 trainer = CFTDetectionTrainer(...)
 trainer.setup_val()
 trainer.validate()
@@ -533,7 +533,7 @@ self.validator = self.get_validator()
 self._dual_ref = unwrap_model(trainer.ema.ema or trainer.model)
 
 # preprocess
-self._dual_ref.ir_input = batch["img2"]   # 已 /255、half/float
+self._dual_ref.ir_input = batch["img2"]  # 已 /255、half/float
 
 # validator.py 内
 preds = model(batch["img"])  # DualDetectionModel.__call__ 读到 ir_input → predict(img, ir)
@@ -569,11 +569,11 @@ flowchart LR
 
 ### 11.9 改进效果（本机 y8_cft_v2，摘录）
 
-| 阶段 | epoch | mAP50 (val, iou=0.7) | 说明 |
-|------|-------|----------------------|------|
-| 冻结 backbone 末 | 10 | ~0.900 | 只训融合+头 |
-| 解冻后续训 | 39 | **0.968** | 全网络微调 |
-| 论文 Y5-CFT | — | 0.975 | 目标参考 |
+| 阶段             | epoch | mAP50 (val, iou=0.7) | 说明        |
+| ---------------- | ----- | -------------------- | ----------- |
+| 冻结 backbone 末 | 10    | ~0.900               | 只训融合+头 |
+| 解冻后续训       | 39    | **0.968**            | 全网络微调  |
+| 论文 Y5-CFT      | —     | 0.975                | 目标参考    |
 
 稳步上涨原因见 `next.md`：预训练起点 + 两阶段训练 + GPT 学融合 + lr 衰减 + 未训满 200 epoch。
 
@@ -581,17 +581,17 @@ flowchart LR
 
 ### 11.10 涉及文件索引（便于 Code Review）
 
-| 文件 | 职责 |
-|------|------|
-| `ultralytics/data/dual_augment.py` | P1 同步增强 + DualLetterBox |
-| `ultralytics/data/dual_stream.py` | 双路 Dataset、build_transforms、collate |
-| `ultralytics/data/dual_utils.py` | `llvip_dual.yaml` 四路径校验 |
-| `ultralytics/nn/modules/cft.py` | GPT / Add / Add2 |
-| `ultralytics/nn/tasks_dual.py` | 双路前向、IR 镜像加载权重 |
-| `ultralytics/nn/tasks.py` | parse_model 注册 CFT、`f=-4` |
-| `ultralytics/models/yolo/detect/cft_train.py` | Trainer/Validator、freeze、双路 batch |
-| `tools/train_cft.py` | 入口、默认超参、freeze_epochs 弹出 |
-| `tools/val_cft.py` | P5 论文协议评估 |
-| `tools/load_cft_partial.py` | P3 Y5→Y8 GPT 权重 |
-| `ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml` | 模型结构 |
-| `ultralytics/cfg/datasets/llvip_dual.yaml` | train_rgb/val_rgb/train_ir/val_ir |
+| 文件                                                                | 职责                                    |
+| ------------------------------------------------------------------- | --------------------------------------- |
+| `ultralytics/data/dual_augment.py`                                  | P1 同步增强 + DualLetterBox             |
+| `ultralytics/data/dual_stream.py`                                   | 双路 Dataset、build_transforms、collate |
+| `ultralytics/data/dual_utils.py`                                    | `llvip_dual.yaml` 四路径校验            |
+| `ultralytics/nn/modules/cft.py`                                     | GPT / Add / Add2                        |
+| `ultralytics/nn/tasks_dual.py`                                      | 双路前向、IR 镜像加载权重               |
+| `ultralytics/nn/tasks.py`                                           | parse_model 注册 CFT、`f=-4`            |
+| `ultralytics/models/yolo/detect/cft_train.py`                       | Trainer/Validator、freeze、双路 batch   |
+| `tools/train_cft.py`                                                | 入口、默认超参、freeze_epochs 弹出      |
+| `tools/val_cft.py`                                                  | P5 论文协议评估                         |
+| `tools/load_cft_partial.py`                                         | P3 Y5→Y8 GPT 权重                       |
+| `ultralytics/cfg/models/v8/yolov8l_fusion_transformerx3_llvip.yaml` | 模型结构                                |
+| `ultralytics/cfg/datasets/llvip_dual.yaml`                          | train_rgb/val_rgb/train_ir/val_ir       |
